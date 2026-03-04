@@ -40,22 +40,20 @@ export const columns: ColumnDef<TFEvent>[] = [
     header: ({ column }) => <SortHeader column={column} label="Business Unit" />,
     cell: ({ row }) => {
       const allBus: string[] = (row.original as TFEvent & { _all_bus?: string[] })._all_bus || [row.original.business_unit];
-      if (allBus.length > 1) {
-        return (
-          <span className="inline-block px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-600" title={allBus.join(", ")}>
-            Multiple
-          </span>
-        );
-      }
-      const bu = allBus[0];
-      const colors = BU_COLORS[bu];
       return (
-        <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${colors?.text || ""} ${colors?.bg || ""}`}>
-          {bu}
-        </span>
+        <div className="flex flex-row gap-1">
+          {allBus.map((bu) => {
+            const colors = BU_COLORS[bu];
+            return (
+              <span key={bu} className={`inline-block px-2 py-0.5 rounded text-xs font-medium whitespace-nowrap ${colors?.text || ""} ${colors?.bg || ""}`}>
+                {bu}
+              </span>
+            );
+          })}
+        </div>
       );
     },
-    size: 140,
+    size: 260,
   },
   {
     accessorKey: "event_type",
