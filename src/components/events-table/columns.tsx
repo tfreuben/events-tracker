@@ -29,7 +29,7 @@ export const columns: ColumnDef<TFEvent>[] = [
     accessorKey: "event_name",
     header: ({ column }) => <SortHeader column={column} label="Event Name" />,
     cell: ({ row }) => (
-      <div className="font-medium min-w-[220px] max-w-[300px]">
+      <div className="font-medium w-[220px] max-w-[220px] truncate" title={row.original.event_name}>
         {row.original.event_name}
       </div>
     ),
