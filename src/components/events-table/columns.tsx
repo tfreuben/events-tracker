@@ -39,12 +39,18 @@ export const columns: ColumnDef<TFEvent>[] = [
     accessorKey: "business_unit",
     header: ({ column }) => <SortHeader column={column} label="Business Unit" />,
     cell: ({ row }) => {
-      const bu = row.original.business_unit;
-      const colors = BU_COLORS[bu];
+      const allBus: string[] = (row.original as TFEvent & { _all_bus?: string[] })._all_bus || [row.original.business_unit];
       return (
-        <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${colors?.text || ""} ${colors?.bg || ""}`}>
-          {bu}
-        </span>
+        <div className="flex flex-wrap gap-1">
+          {allBus.map((bu) => {
+            const colors = BU_COLORS[bu];
+            return (
+              <span key={bu} className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${colors?.text || ""} ${colors?.bg || ""}`}>
+                {bu}
+              </span>
+            );
+          })}
+        </div>
       );
     },
     size: 140,
