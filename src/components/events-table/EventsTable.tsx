@@ -101,13 +101,13 @@ export function EventsTable() {
   );
 
   const handleExportCSV = useCallback(() => {
-    if (!events.length) return;
+    if (!displayEvents.length) return;
     const headers = columns
       .map((c) => (c as { accessorKey?: string }).accessorKey)
       .filter(Boolean) as string[];
     const csvRows = [
       headers.map((h) => h.replace(/_/g, " ")).join(","),
-      ...events.map((event) =>
+      ...displayEvents.map((event) =>
         headers
           .map((h) => {
             const val = event[h as keyof TFEvent];
@@ -141,6 +141,25 @@ export function EventsTable() {
     }
   }, [mutate]);
 
+  // Deduplicate events on the "All" tab: group by event name + dates, merge BU badges
+  const displayEvents = useMemo(() => {
+    if (filters.businessUnit) return events;
+    const seen = new Map<string, TFEvent & { _all_bus?: string[] }>();
+    for (const event of events) {
+      const key = `${event.event_name}__${event.start_date}__${event.end_date}`;
+      if (seen.has(key)) {
+        const existing = seen.get(key)!;
+        if (!existing._all_bus) existing._all_bus = [existing.business_unit];
+        if (!existing._all_bus.includes(event.business_unit)) {
+          existing._all_bus.push(event.business_unit);
+        }
+      } else {
+        seen.set(key, { ...event, _all_bus: [event.business_unit] });
+      }
+    }
+    return Array.from(seen.values());
+  }, [events, filters.businessUnit]);
+
   const columnsWithActions = useMemo(() => {
     if (!isAdmin) return columns;
     return [
@@ -163,7 +182,7 @@ export function EventsTable() {
   }, [isAdmin, handleDelete]);
 
   const table = useReactTable({
-    data: events,
+    data: displayEvents,
     columns: columnsWithActions,
     state: { sorting, columnVisibility },
     onSortingChange: setSorting,
@@ -178,14 +197,14 @@ export function EventsTable() {
         onFilterChange={handleFilterChange}
         onExportCSV={handleExportCSV}
         onAddEvent={() => setShowAddDialog(true)}
-        eventCount={events.length}
+        eventCount={displayEvents.length}
       />
 
       {isLoading ? (
         <div className="flex items-center justify-center py-20">
           <Loader2 className="animate-spin text-slate-400" size={24} />
         </div>
-      ) : events.length === 0 ? (
+      ) : displayEvents.length === 0 ? (
         <div className="text-center py-20 text-slate-500">
           No events found. {isAdmin && "Click 'Add Event' to create one."}
         </div>
@@ -211,14 +230,14 @@ export function EventsTable() {
             </thead>
             <tbody>
               {table.getRowModel().rows.map((row) => {
-                const bu = row.original.business_unit;
-                const buColor = BU_COLORS[bu];
+                const allBus: string[] = (row.original as TFEvent & { _all_bus?: string[] })._all_bus || [row.original.business_unit];
+                const buColor = allBus.length === 1 ? BU_COLORS[allBus[0]] : null;
                 return (
                   <tr
                     key={row.id}
                     className={cn(
                       "border-b border-l-4 hover:bg-slate-50/50 transition-colors",
-                      buColor?.border || "border-l-transparent"
+                      buColor?.border || "border-l-slate-200"
                     )}
                   >
                     {row.getVisibleCells().map((cell) => {
