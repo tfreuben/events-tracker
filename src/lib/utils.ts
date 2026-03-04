@@ -17,7 +17,10 @@ export function formatCurrency(value: number | null | undefined): string {
 
 export function formatDate(value: string | null | undefined): string {
   if (!value) return "";
-  const d = new Date(value + "T00:00:00");
+  // Take only the date part to avoid timezone issues with full ISO strings
+  const datePart = value.substring(0, 10);
+  const d = new Date(datePart + "T00:00:00");
+  if (isNaN(d.getTime())) return "";
   return d.toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
