@@ -3,25 +3,46 @@
 @tailwind utilities;
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --background: #f8fafc;
+  --foreground: #0f172a;
 }
 
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
 }
 
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
-  }
+/* Sticky table styles */
+.table-container {
+  overflow: auto;
+  max-height: calc(100vh - 220px);
+}
+
+.table-container table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.table-container thead th {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: #f1f5f9;
+}
+
+.table-container thead th:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 20;
+}
+
+.table-container tbody td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 5;
+  background: white;
+}
+
+.table-container tbody tr:hover td:first-child {
+  background: #f8fafc;
 }
