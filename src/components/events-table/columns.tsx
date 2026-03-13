@@ -99,8 +99,8 @@ export const columns: ColumnDef<TFEvent>[] = [
   },
   {
     accessorKey: "sales_staff_attending",
-    header: "Staff",
-    size: 60,
+    header: "No. of Staff",
+    size: 90,
   },
   {
     accessorKey: "staff_names",

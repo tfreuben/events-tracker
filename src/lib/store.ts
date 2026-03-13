@@ -50,12 +50,10 @@ interface UIStore {
 }
 
 const DEFAULT_HIDDEN_COLUMNS: string[] = [
-  "staff_names",
   "sponsorship_level",
   "booth_number",
   "products_to_feature",
   "pre_event_goals",
-  "post_event_notes",
   "article_url",
   "event_description",
   "target_audience",
