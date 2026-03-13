@@ -15,6 +15,7 @@ interface ToolbarProps {
     region: string;
     eventType: string;
     search: string;
+    timeframe: string;
   };
   onFilterChange: (key: string, value: string) => void;
   onExportCSV: () => void;
@@ -118,6 +119,17 @@ export function TableToolbar({ filters, onFilterChange, onExportCSV, onAddEvent,
           {EVENT_TYPES.map((t) => (
             <option key={t} value={t}>{t}</option>
           ))}
+        </select>
+
+        {/* Timeframe filter */}
+        <select
+          value={filters.timeframe}
+          onChange={(e) => onFilterChange("timeframe", e.target.value)}
+          className="text-sm border rounded-md px-2 py-1.5 bg-white"
+        >
+          <option value="">All Events</option>
+          <option value="upcoming">Upcoming</option>
+          <option value="past">Past</option>
         </select>
 
         <div className="flex items-center gap-2 ml-auto">

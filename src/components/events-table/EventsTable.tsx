@@ -40,9 +40,11 @@ export function EventsTable() {
     region: "",
     eventType: "",
     search: "",
+    timeframe: "",
   });
 
-  const queryString = buildQueryString(filters);
+  const { timeframe, ...serverFilters } = filters;
+  const queryString = buildQueryString(serverFilters);
   const { data: events = [], mutate, isLoading } = useSWR<TFEvent[]>(
     `/api/events${queryString ? `?${queryString}` : ""}`,
     fetcher,
@@ -143,9 +145,26 @@ export function EventsTable() {
 
   // Deduplicate events on the "All" tab: group by event name + dates, merge BU badges
   const displayEvents = useMemo(() => {
-    if (filters.businessUnit) return events;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    let filtered = events;
+
+    if (timeframe === "upcoming") {
+      filtered = events.filter((e) => {
+        if (!e.end_date) return true;
+        return new Date(e.end_date + "T00:00:00") >= today;
+      });
+    } else if (timeframe === "past") {
+      filtered = events.filter((e) => {
+        if (!e.end_date) return false;
+        return new Date(e.end_date + "T00:00:00") < today;
+      });
+    }
+
+    if (filters.businessUnit) return filtered;
     const seen = new Map<string, TFEvent & { _all_bus?: string[] }>();
-    for (const event of events) {
+    for (const event of filtered) {
       const key = `${event.event_name}__${event.start_date}__${event.end_date}`;
       if (seen.has(key)) {
         const existing = seen.get(key)!;
@@ -158,7 +177,7 @@ export function EventsTable() {
       }
     }
     return Array.from(seen.values());
-  }, [events, filters.businessUnit]);
+  }, [events, filters.businessUnit, timeframe]);
 
   const columnsWithActions = useMemo(() => {
     if (!isAdmin) return columns;
@@ -229,14 +248,20 @@ export function EventsTable() {
               ))}
             </thead>
             <tbody>
-              {table.getRowModel().rows.map((row) => {
+              {(() => {
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                return table.getRowModel().rows.map((row) => {
                 const allBus: string[] = (row.original as TFEvent & { _all_bus?: string[] })._all_bus || [row.original.business_unit];
                 const buColor = allBus.length === 1 ? BU_COLORS[allBus[0]] : null;
+                const endDate = row.original.end_date ? new Date(row.original.end_date + 'T00:00:00') : null;
+                const isPast = endDate !== null && endDate < today;
                 return (
                   <tr
                     key={row.id}
                     className={cn(
-                      "border-b border-l-4 hover:bg-slate-50/50 transition-colors",
+                      "border-b border-l-4 transition-colors",
+                      isPast ? "bg-slate-50 opacity-60 hover:opacity-80" : "hover:bg-slate-50/50",
                       buColor?.border || "border-l-slate-200"
                     )}
                   >
@@ -263,7 +288,8 @@ export function EventsTable() {
                     })}
                   </tr>
                 );
-              })}
+              });
+              })()}
             </tbody>
           </table>
         </div>
