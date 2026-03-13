@@ -32,7 +32,7 @@ function buildQueryString(filters: Record<string, string>) {
 export function EventsTable() {
   const { isAdmin } = useAuthStore();
   const { columnVisibility } = useUIStore();
-  const [sorting, setSorting] = useState<SortingState>([]);
+  const [sorting, setSorting] = useState<SortingState>([{ id: "start_date", desc: false }]);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [filters, setFilters] = useState({
     businessUnit: "",
