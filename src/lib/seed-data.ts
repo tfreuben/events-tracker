@@ -1281,7 +1281,7 @@ export const seedEvents = [
     status: 'Planned',
     sponsorshipLevel: null,
     boothNumber: null,
-    eventWebsiteUrl: null,
+    eventWebsiteUrl: 'https://www.ukchamberofshipping.com/events/safety-culture-conference-2026',
     eventDescription: 'Safety culture conference hosted by UK Chamber of Shipping covering patterns of incidents and repeat behaviours, human performance, safety leadership, and audits as learning opportunities.',
     targetAudience: 'Maritime safety professionals, shipping operators, seafarers, training managers',
     keyTopics: 'Safety culture, patterns of incidents and repeat behaviours, lithium-ion battery safety, vehicle deck safety, enclosed spaces, fatigue, human performance and safety leadership, audits as learning opportunities',
