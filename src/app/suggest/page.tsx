@@ -121,7 +121,7 @@ export default function SuggestPage() {
       const res = await fetch(`/api/events?search=${encodeURIComponent(value)}`);
       const events: Array<{ event_name: string }> = await res.json();
       if (events.length > 0) {
-        const uniqueNames = [...new Set(events.map((e) => e.event_name))];
+        const uniqueNames = Array.from(new Set(events.map((e) => e.event_name)));
         const nameList = uniqueNames.slice(0, 3).join(", ");
         setTimeout(() => {
           setMessages((prev) => [
