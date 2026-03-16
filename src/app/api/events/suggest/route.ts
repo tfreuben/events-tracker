@@ -6,7 +6,7 @@ const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Se
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { event_name, business_unit, event_type, region, start_date, end_date, city, country, why_attend, event_url } = body;
+    const { submitter_name, event_name, business_unit, event_type, region, start_date, end_date, city, country, why_attend, event_url } = body;
 
     if (!event_name || !business_unit || !event_type || !region) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
         ${0}, ${0}, ${0}, ${budgetMonth},
         ${"Requested"}, ${null}, ${null}, ${event_url || null},
         ${why_attend || null}, ${null}, ${null}, ${null},
-        ${null}, ${null}, ${"Not Started"}, ${null}
+        ${submitter_name ? `Submitted by: ${submitter_name}` : null}, ${null}, ${"Not Started"}, ${null}
       ) RETURNING id`;
 
     return NextResponse.json({ success: true, id: result.rows[0].id }, { status: 201 });
