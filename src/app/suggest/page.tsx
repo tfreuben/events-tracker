@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, FormEvent } from "react";
 
 type Step =
   | "event_name"
@@ -145,7 +145,7 @@ export default function SuggestPage() {
     }
   };
 
-  const handleTextSubmit = (e: React.FormEvent) => {
+  const handleTextSubmit = (e: FormEvent) => {
     e.preventDefault();
     if (!input.trim()) return;
     advance(step, input.trim());
@@ -188,15 +188,15 @@ export default function SuggestPage() {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-slate-100">
+    <div className="flex flex-col h-full min-h-[calc(100vh-56px)] bg-slate-100">
       {/* Header */}
-      <header className="flex-shrink-0 bg-slate-800 text-white px-6 py-4">
+      <div className="flex-shrink-0 bg-slate-800 text-white px-6 py-4">
         <p className="text-xs text-slate-400 uppercase tracking-widest font-medium">TrustFlight</p>
         <p className="text-base font-semibold">Event Suggestion</p>
-      </header>
+      </div>
 
       {/* Messages */}
-      <main className="flex-1 overflow-y-auto px-4 py-6">
+      <div className="flex-1 overflow-y-auto px-4 py-6">
         <div className="max-w-xl mx-auto space-y-3">
           {messages.map((msg, i) => (
             <div key={i} className={`flex ${msg.from === "user" ? "justify-end" : "justify-start"}`}>
@@ -212,7 +212,6 @@ export default function SuggestPage() {
             </div>
           ))}
 
-          {/* Summary card */}
           {(step === "confirm" || step === "done") && (
             <div className="flex justify-start">
               <div className="bg-white rounded-2xl rounded-tl-sm shadow-sm p-4 w-full max-w-sm space-y-2 text-sm">
@@ -232,11 +231,11 @@ export default function SuggestPage() {
 
           <div ref={bottomRef} />
         </div>
-      </main>
+      </div>
 
       {/* Input area */}
       {step !== "done" && (
-        <footer className="flex-shrink-0 bg-slate-50 border-t border-slate-200 px-4 py-4">
+        <div className="flex-shrink-0 bg-slate-50 border-t border-slate-200 px-4 py-4">
           <div className="max-w-xl mx-auto">
             {step === "confirm" ? (
               <div className="space-y-2">
@@ -299,7 +298,7 @@ export default function SuggestPage() {
               </form>
             )}
           </div>
-        </footer>
+        </div>
       )}
     </div>
   );
