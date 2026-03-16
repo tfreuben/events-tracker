@@ -1,15 +1,23 @@
 "use client";
 
 import { useEffect } from "react";
+import { usePathname } from "next/navigation";
 import { Header } from "./Header";
 import { useAuthStore } from "@/lib/store";
 
 export function ClientProviders({ children }: { children: React.ReactNode }) {
   const { checkSession } = useAuthStore();
+  const pathname = usePathname();
 
   useEffect(() => {
-    checkSession();
-  }, [checkSession]);
+    if (pathname !== "/suggest") {
+      checkSession();
+    }
+  }, [checkSession, pathname]);
+
+  if (pathname === "/suggest") {
+    return <>{children}</>;
+  }
 
   return (
     <>
