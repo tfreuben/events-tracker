@@ -11,7 +11,7 @@ export const EVENT_TYPES = ["Conference", "Trade Show", "Forum", "Workshop", "Di
 
 export const REGIONS = ["EMEA", "NA", "LATAM"] as const;
 
-export const STATUSES = ["Planned", "Confirmed", "Completed", "Cancelled"] as const;
+export const STATUSES = ["Planned", "Confirmed", "Completed", "Cancelled", "Requested"] as const;
 
 export const BUDGET_MONTHS = ["Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec", "Jan", "Feb", "Mar"] as const;
 
