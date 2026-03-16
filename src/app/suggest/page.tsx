@@ -3,19 +3,10 @@
 import { useState, useRef, useEffect, FormEvent } from "react";
 
 type Step =
-  | "event_url"
-  | "event_name"
-  | "business_unit"
-  | "event_type"
-  | "region"
-  | "start_date"
-  | "end_date"
-  | "location"
-  | "why_attend"
-  | "confirm"
-  | "done";
+  | "event_url" | "event_name" | "business_unit" | "event_type" | "region"
+  | "start_date" | "end_date" | "location" | "why_attend" | "confirm" | "done";
 
-interface Message { from: "bot" | "user"; text: string }
+interface Message { from: "bot" | "user"; text: string; step?: Step }
 
 interface SuggestionData {
   event_url: string; event_name: string; business_unit: string; event_type: string;
@@ -39,11 +30,10 @@ const STEP_PROMPTS: Partial<Record<Step, string>> = {
 };
 
 const STEPS: Step[] = ["event_url","event_name","business_unit","event_type","region","start_date","end_date","location","why_attend","confirm","done"];
-const AUTO_SKIPPABLE: Step[] = ["event_name", "start_date", "end_date", "location"];
+const AUTO_SKIPPABLE: Step[] = ["event_name","start_date","end_date","location"];
 
 function getNextStep(s: Step): Step {
-  const i = STEPS.indexOf(s);
-  return STEPS[i + 1] ?? "done";
+  const i = STEPS.indexOf(s); return STEPS[i + 1] ?? "done";
 }
 
 function getStepValue(step: Step, data: SuggestionData): string {
@@ -52,6 +42,20 @@ function getStepValue(step: Step, data: SuggestionData): string {
   if (step === "end_date") return data.end_date;
   if (step === "location") return [data.city, data.country].filter(Boolean).join(", ");
   return "";
+}
+
+function clearFromStep(step: Step, data: SuggestionData): SuggestionData {
+  const idx = STEPS.indexOf(step);
+  const next = { ...data };
+  const fieldMap: Partial<Record<Step, (keyof SuggestionData)[]>> = {
+    event_url: ["event_url"], event_name: ["event_name"], business_unit: ["business_unit"],
+    event_type: ["event_type"], region: ["region"], start_date: ["start_date"],
+    end_date: ["end_date"], location: ["city","country"], why_attend: ["why_attend"],
+  };
+  STEPS.slice(idx).forEach(s => {
+    (fieldMap[s] ?? []).forEach(f => { next[f] = ""; });
+  });
+  return next;
 }
 
 function BotAvatar() {
@@ -63,7 +67,7 @@ function BotAvatar() {
   );
 }
 
-const EMPTY_DATA: SuggestionData = { event_url: "", event_name: "", business_unit: "", event_type: "", region: "", start_date: "", end_date: "", city: "", country: "", why_attend: "" };
+const EMPTY: SuggestionData = { event_url:"", event_name:"", business_unit:"", event_type:"", region:"", start_date:"", end_date:"", city:"", country:"", why_attend:"" };
 
 export default function SuggestPage() {
   const [messages, setMessages] = useState<Message[]>([
@@ -72,7 +76,7 @@ export default function SuggestPage() {
   ]);
   const [step, setStep] = useState<Step>("event_url");
   const [input, setInput] = useState("");
-  const [formData, setFormData] = useState<SuggestionData>(EMPTY_DATA);
+  const [formData, setFormData] = useState<SuggestionData>(EMPTY);
   const [prefilled, setPrefilled] = useState<Set<Step>>(new Set());
   const [checking, setChecking] = useState(false);
   const [duplicateWarning, setDuplicateWarning] = useState(false);
@@ -82,9 +86,9 @@ export default function SuggestPage() {
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, step, checking]);
 
-  const addBot = (text: string, delay = 350) => setTimeout(() => setMessages(p => [...p, { from: "bot", text }]), delay);
+  const addBot = (text: string, delay = 350) =>
+    setTimeout(() => setMessages(p => [...p, { from: "bot", text }]), delay);
 
-  // Move to next step, auto-advancing prefilled steps
   const goTo = (next: Step, data: SuggestionData, pf: Set<Step>) => {
     if (AUTO_SKIPPABLE.includes(next) && pf.has(next)) {
       const val = getStepValue(next, data);
@@ -93,7 +97,7 @@ export default function SuggestPage() {
         setTimeout(() => {
           setMessages(p => [...p,
             { from: "bot", text: STEP_PROMPTS[next]! },
-            { from: "user", text: `${val} ✓` },
+            { from: "user", text: `${val} ✓`, step: next },
           ]);
           const nn = getNextStep(next);
           setStep(nn);
@@ -107,10 +111,23 @@ export default function SuggestPage() {
     else if (next !== "done" && STEP_PROMPTS[next]) addBot(STEP_PROMPTS[next]!);
   };
 
-  const handleEventUrl = async (url: string) => {
-    setMessages(p => [...p, { from: "user", text: url }]);
+  const handleEdit = (msgIndex: number, editStep: Step) => {
+    setMessages(prev => prev.slice(0, msgIndex));
+    setFormData(prev => clearFromStep(editStep, prev));
+    setPrefilled(prev => {
+      const pf = new Set(prev);
+      STEPS.slice(STEPS.indexOf(editStep)).forEach(s => pf.delete(s));
+      return pf;
+    });
+    setDuplicateWarning(false);
+    setChecking(false);
     setInput("");
-    setChecking(true);
+    setStep(editStep);
+  };
+
+  const handleEventUrl = async (url: string) => {
+    setMessages(p => [...p, { from: "user", text: url, step: "event_url" }]);
+    setInput(""); setChecking(true);
     try {
       const res = await fetch("/api/fetch-event-url", {
         method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url }),
@@ -130,18 +147,11 @@ export default function SuggestPage() {
           found.push(`Location: ${[d.city, d.country].filter(Boolean).join(", ")}`);
         }
         if (d.description) newData.why_attend = d.description;
-        setFormData(newData);
-        setPrefilled(newPf);
-        setChecking(false);
-        if (found.length > 0) {
-          setTimeout(() => {
-            setMessages(p => [...p, { from: "bot", text: `Found it! I've pre-filled: ${found.join(" · ")}. I'll auto-fill those steps — just confirm or update anything that looks off.` }]);
-            setTimeout(() => goTo("event_name", newData, newPf), 600);
-          }, 350);
-        } else {
-          addBot("I couldn't extract details from that page, but I've saved the URL. Let's continue manually.");
-          setTimeout(() => goTo("event_name", newData, newPf), 700);
-        }
+        setFormData(newData); setPrefilled(newPf); setChecking(false);
+        setTimeout(() => {
+          setMessages(p => [...p, { from: "bot", text: found.length > 0 ? `Found it! I've pre-filled: ${found.join(" · ")}. I'll auto-fill those steps — just confirm or update anything that looks off.` : "I couldn't extract details from that page, but I've saved the URL. Let's continue manually." }]);
+          setTimeout(() => goTo("event_name", newData, newPf), 600);
+        }, 350);
         return;
       }
     } catch { /* fall through */ }
@@ -153,10 +163,9 @@ export default function SuggestPage() {
   };
 
   const handleEventName = async (name: string) => {
-    setMessages(p => [...p, { from: "user", text: name }]);
+    setMessages(p => [...p, { from: "user", text: name, step: "event_name" }]);
     setFormData(p => ({ ...p, event_name: name }));
-    setInput("");
-    setChecking(true);
+    setInput(""); setChecking(true);
     try {
       const res = await fetch(`/api/events?search=${encodeURIComponent(name)}`);
       const events: Array<{ event_name: string }> = await res.json();
@@ -164,8 +173,7 @@ export default function SuggestPage() {
         const names = Array.from(new Set(events.map(e => e.event_name))).slice(0, 3).join(", ");
         setTimeout(() => {
           setMessages(p => [...p, { from: "bot", text: `Heads up — similar events are already on the calendar: ${names}. Would you like to continue anyway or start over?` }]);
-          setDuplicateWarning(true);
-          setChecking(false);
+          setDuplicateWarning(true); setChecking(false);
         }, 350);
         return;
       }
@@ -178,7 +186,7 @@ export default function SuggestPage() {
 
   const advance = (currentStep: Step, value: string, display?: string) => {
     const shown = display !== undefined ? display : value;
-    if (shown) setMessages(p => [...p, { from: "user", text: shown }]);
+    if (shown) setMessages(p => [...p, { from: "user", text: shown, step: currentStep }]);
     const newData = { ...formData };
     if (currentStep === "business_unit") newData.business_unit = value;
     else if (currentStep === "event_type") newData.event_type = value;
@@ -190,16 +198,14 @@ export default function SuggestPage() {
       newData.city = i !== -1 ? value.slice(0, i).trim() : value.trim();
       newData.country = i !== -1 ? value.slice(i + 1).trim() : "";
     } else if (currentStep === "why_attend") newData.why_attend = value;
-    setFormData(newData);
-    setInput("");
+    setFormData(newData); setInput("");
     goTo(getNextStep(currentStep), newData, prefilled);
   };
 
   const handleSkip = () => {
-    setMessages(p => [...p, { from: "user", text: "Skip" }]);
+    setMessages(p => [...p, { from: "user", text: "Skip", step }]);
     setInput("");
-    const newData = { ...formData };
-    goTo(getNextStep(step), newData, prefilled);
+    goTo(getNextStep(step), { ...formData }, prefilled);
   };
 
   const handleTextSubmit = (e: FormEvent) => {
@@ -229,14 +235,15 @@ export default function SuggestPage() {
       { from: "bot", text: STEP_PROMPTS.event_url! },
     ]);
     setStep("event_url"); setInput(""); setDuplicateWarning(false); setChecking(false);
-    setFormData(EMPTY_DATA); setPrefilled(new Set());
+    setFormData(EMPTY); setPrefilled(new Set());
   };
 
-  const isChoice = ["business_unit", "event_type", "region"].includes(step);
-  const isOptional = ["event_url", "start_date", "end_date", "location", "why_attend"].includes(step);
-  const isDate = ["start_date", "end_date"].includes(step);
+  const isChoice = ["business_unit","event_type","region"].includes(step);
+  const isOptional = ["event_url","start_date","end_date","location","why_attend"].includes(step);
+  const isDate = ["start_date","end_date"].includes(step);
   const getChoices = () => step === "business_unit" ? BUSINESS_UNITS : step === "event_type" ? EVENT_TYPES : step === "region" ? REGIONS : [];
   const showInput = !checking && !duplicateWarning && step !== "done" && step !== "confirm";
+  const isDone = step === "done";
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4 sm:p-6" style={{ background: "linear-gradient(135deg, #0b1a3b 0%, #162850 60%, #0f2240 100%)" }}>
@@ -261,10 +268,25 @@ export default function SuggestPage() {
           {messages.map((msg, i) => (
             <div key={i} className={`flex gap-2.5 ${msg.from === "user" ? "justify-end" : "justify-start"}`}>
               {msg.from === "bot" && <BotAvatar />}
-              <div className={`max-w-[78%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed shadow-sm ${msg.from === "bot" ? "bg-white text-slate-700 rounded-tl-sm border border-slate-100" : "text-white rounded-tr-sm"}`}
-                style={msg.from === "user" ? { background: "linear-gradient(135deg, #0b1a3b, #1e3a6e)" } : {}}>
-                {msg.text}
-              </div>
+              {msg.from === "user" ? (
+                <div className="flex flex-col items-end gap-1 group">
+                  <div className="max-w-[78%] px-4 py-2.5 rounded-2xl rounded-tr-sm text-sm leading-relaxed shadow-sm text-white" style={{ background: "linear-gradient(135deg, #0b1a3b, #1e3a6e)" }}>
+                    {msg.text}
+                  </div>
+                  {msg.step && !isDone && (
+                    <button
+                      onClick={() => handleEdit(i, msg.step!)}
+                      className="text-xs text-slate-400 hover:text-blue-500 transition-colors opacity-0 group-hover:opacity-100 px-1"
+                    >
+                      Edit
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div className="max-w-[78%] px-4 py-2.5 rounded-2xl rounded-tl-sm text-sm leading-relaxed shadow-sm bg-white text-slate-700 border border-slate-100">
+                  {msg.text}
+                </div>
+              )}
             </div>
           ))}
 
@@ -279,7 +301,7 @@ export default function SuggestPage() {
             </div>
           )}
 
-          {(step === "confirm" || step === "done") && (
+          {(step === "confirm" || isDone) && (
             <div className="flex gap-2.5 justify-start">
               <BotAvatar />
               <div className="bg-white border border-slate-100 rounded-2xl rounded-tl-sm shadow-sm p-4 w-full max-w-xs space-y-2.5">
@@ -314,7 +336,7 @@ export default function SuggestPage() {
               </button>
             </div>
           )}
-          {step === "done" && (
+          {isDone && (
             <button onClick={handleStartOver} className="w-full py-2.5 rounded-xl text-sm font-medium text-slate-500 hover:text-slate-700 hover:bg-slate-50 transition-colors">Submit another suggestion</button>
           )}
           {showInput && (
