@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
         ${null}, ${null}, ${"Not Started"}, ${null}
       ) RETURNING id`;
 
-    return NextResponse.json({ success: true, id: result[0].id }, { status: 201 });
+    return NextResponse.json({ success: true, id: result.rows[0].id }, { status: 201 });
   } catch (err) {
     console.error("Suggest route error:", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
