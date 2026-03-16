@@ -19,7 +19,7 @@ interface Message {
   text: string;
 }
 
-interface FormData {
+interface SuggestionData {
   event_name: string;
   business_unit: string;
   event_type: string;
@@ -71,7 +71,7 @@ export default function SuggestPage() {
   ]);
   const [step, setStep] = useState<Step>("event_name");
   const [input, setInput] = useState("");
-  const [formData, setFormData] = useState<FormData>({
+  const [formData, setFormData] = useState<SuggestionData>({
     event_name: "",
     business_unit: "",
     event_type: "",
@@ -102,7 +102,7 @@ export default function SuggestPage() {
       setMessages((prev) => [...prev, { from: "user", text: display }]);
     }
 
-    setFormData((prev) => {
+    setFormData((prev: SuggestionData) => {
       const next = { ...prev };
       if (currentStep === "event_name") next.event_name = value;
       else if (currentStep === "business_unit") next.business_unit = value;
