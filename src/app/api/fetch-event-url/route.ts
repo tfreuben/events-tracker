@@ -26,6 +26,16 @@ function getMeta(html: string, name: string): string | null {
   return null;
 }
 
+function extractJsonLdBlocks(html: string): string[] {
+  const re = /<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
+  const blocks: string[] = [];
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(html)) !== null) {
+    blocks.push(m[1]);
+  }
+  return blocks;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const { url } = await req.json();
@@ -40,11 +50,9 @@ export async function POST(req: NextRequest) {
     const html = await res.text();
     const result: ExtractedEvent = { event_name: null, start_date: null, end_date: null, city: null, country: null, description: null };
 
-    // JSON-LD structured data
-    const scripts = html.matchAll(/<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi);
-    for (const match of scripts) {
+    for (const block of extractJsonLdBlocks(html)) {
       try {
-        const data = JSON.parse(match[1]);
+        const data = JSON.parse(block);
         const items: unknown[] = Array.isArray(data) ? data : [data];
         for (const item of items) {
           const obj = item as Record<string, unknown>;
@@ -67,7 +75,6 @@ export async function POST(req: NextRequest) {
       } catch { /* skip malformed JSON-LD */ }
     }
 
-    // Fallback to meta tags
     if (!result.event_name) result.event_name = getMeta(html, "og:title") ?? html.match(/<title[^>]*>([^<]+)<\/title>/i)?.[1]?.trim() ?? null;
     if (!result.description) result.description = getMeta(html, "og:description") ?? getMeta(html, "description");
 
