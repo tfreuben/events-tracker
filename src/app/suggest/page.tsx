@@ -11,6 +11,7 @@ type Step =
   | "end_date"
   | "location"
   | "why_attend"
+  | "event_url"
   | "confirm"
   | "done";
 
@@ -29,6 +30,7 @@ interface SuggestionData {
   city: string;
   country: string;
   why_attend: string;
+  event_url: string;
 }
 
 const BUSINESS_UNITS = ["Redline", "Baines Simmons", "Kenyon", "TrustFlight"];
@@ -44,6 +46,7 @@ const STEP_PROMPTS: Partial<Record<Step, string>> = {
   end_date: "When does it end? (optional)",
   location: "Where is it? Enter city and country, e.g. London, UK (optional)",
   why_attend: "Why should TrustFlight attend? (optional)",
+  event_url: "Do you have a link to the event website? (optional)",
 };
 
 const STEPS: Step[] = [
@@ -55,6 +58,7 @@ const STEPS: Step[] = [
   "end_date",
   "location",
   "why_attend",
+  "event_url",
   "confirm",
   "done",
 ];
@@ -81,19 +85,62 @@ export default function SuggestPage() {
     city: "",
     country: "",
     why_attend: "",
+    event_url: "",
   });
   const [submitting, setSubmitting] = useState(false);
+  const [checking, setChecking] = useState(false);
+  const [duplicateWarning, setDuplicateWarning] = useState(false);
   const [error, setError] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, step]);
+  }, [messages, step, checking]);
 
-  const addBotMessage = (text: string) => {
+  const addBotMessage = (text: string, delay = 300) => {
     setTimeout(() => {
       setMessages((prev) => [...prev, { from: "bot", text }]);
-    }, 300);
+    }, delay);
+  };
+
+  const moveToStep = (nextStep: Step) => {
+    setStep(nextStep);
+    if (nextStep === "confirm") {
+      addBotMessage("Here's a summary of your suggestion:");
+    } else if (nextStep !== "done" && STEP_PROMPTS[nextStep]) {
+      addBotMessage(STEP_PROMPTS[nextStep]!);
+    }
+  };
+
+  const handleEventName = async (value: string) => {
+    setMessages((prev) => [...prev, { from: "user", text: value }]);
+    setFormData((prev) => ({ ...prev, event_name: value }));
+    setInput("");
+    setChecking(true);
+    try {
+      const res = await fetch(`/api/events?search=${encodeURIComponent(value)}`);
+      const events: Array<{ event_name: string }> = await res.json();
+      if (events.length > 0) {
+        const uniqueNames = [...new Set(events.map((e) => e.event_name))];
+        const nameList = uniqueNames.slice(0, 3).join(", ");
+        setTimeout(() => {
+          setMessages((prev) => [
+            ...prev,
+            {
+              from: "bot",
+              text: `Heads up — we found similar events already on the calendar: ${nameList}. Would you like to continue with your suggestion anyway, or start over?`,
+            },
+          ]);
+          setDuplicateWarning(true);
+          setChecking(false);
+        }, 300);
+        return;
+      }
+    } catch {
+      // proceed anyway if check fails
+    }
+    setChecking(false);
+    moveToStep("business_unit");
   };
 
   const advance = (currentStep: Step, value: string, displayValue?: string) => {
@@ -101,11 +148,9 @@ export default function SuggestPage() {
     if (display) {
       setMessages((prev) => [...prev, { from: "user", text: display }]);
     }
-
     setFormData((prev: SuggestionData) => {
       const next = { ...prev };
-      if (currentStep === "event_name") next.event_name = value;
-      else if (currentStep === "business_unit") next.business_unit = value;
+      if (currentStep === "business_unit") next.business_unit = value;
       else if (currentStep === "event_type") next.event_type = value;
       else if (currentStep === "region") next.region = value;
       else if (currentStep === "start_date") next.start_date = value;
@@ -119,36 +164,29 @@ export default function SuggestPage() {
           next.city = value.trim();
         }
       } else if (currentStep === "why_attend") next.why_attend = value;
+      else if (currentStep === "event_url") next.event_url = value;
       return next;
     });
-
     const nextStep = getNextStep(currentStep);
-    setStep(nextStep);
     setInput("");
-
-    if (nextStep === "confirm") {
-      addBotMessage("Here's a summary of your suggestion:");
-    } else if (nextStep !== "done" && STEP_PROMPTS[nextStep]) {
-      addBotMessage(STEP_PROMPTS[nextStep]!);
-    }
+    moveToStep(nextStep);
   };
 
   const handleSkip = () => {
     setMessages((prev) => [...prev, { from: "user", text: "Skip" }]);
     const nextStep = getNextStep(step);
-    setStep(nextStep);
     setInput("");
-    if (nextStep === "confirm") {
-      addBotMessage("Here's a summary of your suggestion:");
-    } else if (nextStep !== "done" && STEP_PROMPTS[nextStep]) {
-      addBotMessage(STEP_PROMPTS[nextStep]!);
-    }
+    moveToStep(nextStep);
   };
 
   const handleTextSubmit = (e: FormEvent) => {
     e.preventDefault();
     if (!input.trim()) return;
-    advance(step, input.trim());
+    if (step === "event_name") {
+      handleEventName(input.trim());
+    } else {
+      advance(step, input.trim());
+    }
   };
 
   const handleSubmit = async () => {
@@ -164,10 +202,7 @@ export default function SuggestPage() {
       setStep("done");
       setMessages((prev) => [
         ...prev,
-        {
-          from: "bot",
-          text: "Your suggestion has been submitted! The team will review it and add it to the events calendar. Thank you!",
-        },
+        { from: "bot", text: "Your suggestion has been submitted! The team will review it and add it to the events calendar. Thank you!" },
       ]);
     } catch {
       setError("Something went wrong. Please try again.");
@@ -176,8 +211,20 @@ export default function SuggestPage() {
     }
   };
 
+  const handleStartOver = () => {
+    setMessages([
+      { from: "bot", text: "Hi! Use this form to suggest an event for TrustFlight to attend. I'll ask you a few questions." },
+      { from: "bot", text: STEP_PROMPTS.event_name! },
+    ]);
+    setStep("event_name");
+    setInput("");
+    setDuplicateWarning(false);
+    setChecking(false);
+    setFormData({ event_name: "", business_unit: "", event_type: "", region: "", start_date: "", end_date: "", city: "", country: "", why_attend: "", event_url: "" });
+  };
+
   const isChoiceStep = ["business_unit", "event_type", "region"].includes(step);
-  const isOptionalStep = ["start_date", "end_date", "location", "why_attend"].includes(step);
+  const isOptionalStep = ["start_date", "end_date", "location", "why_attend", "event_url"].includes(step);
   const isDateStep = ["start_date", "end_date"].includes(step);
 
   const getChoices = (): string[] => {
@@ -187,12 +234,24 @@ export default function SuggestPage() {
     return [];
   };
 
+  const showInput = !checking && !duplicateWarning && step !== "done" && step !== "confirm";
+
   return (
     <div className="flex flex-col h-full min-h-[calc(100vh-56px)] bg-slate-100">
       {/* Header */}
-      <div className="flex-shrink-0 bg-slate-800 text-white px-6 py-4">
-        <p className="text-xs text-slate-400 uppercase tracking-widest font-medium">TrustFlight</p>
-        <p className="text-base font-semibold">Event Suggestion</p>
+      <div className="flex-shrink-0 bg-slate-800 text-white px-6 py-4 flex items-center gap-3">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="https://www.trustflight.com/wp-content/uploads/2025/09/cropped-tf-favicon.jpg"
+          alt="TrustFlight"
+          width={32}
+          height={32}
+          className="rounded"
+        />
+        <div>
+          <p className="text-xs text-slate-400 uppercase tracking-widest font-medium">TrustFlight</p>
+          <p className="text-base font-semibold">Event Submissions</p>
+        </div>
       </div>
 
       {/* Messages */}
@@ -200,21 +259,27 @@ export default function SuggestPage() {
         <div className="max-w-xl mx-auto space-y-3">
           {messages.map((msg, i) => (
             <div key={i} className={`flex ${msg.from === "user" ? "justify-end" : "justify-start"}`}>
-              <div
-                className={`max-w-[80%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${
-                  msg.from === "bot"
-                    ? "bg-white text-slate-800 shadow-sm rounded-tl-sm"
-                    : "bg-slate-700 text-white rounded-tr-sm"
-                }`}
-              >
+              <div className={`max-w-[80%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${
+                msg.from === "bot"
+                  ? "bg-white text-slate-800 shadow-sm rounded-tl-sm"
+                  : "bg-slate-700 text-white rounded-tr-sm"
+              }`}>
                 {msg.text}
               </div>
             </div>
           ))}
 
+          {checking && (
+            <div className="flex justify-start">
+              <div className="bg-white px-4 py-2.5 rounded-2xl rounded-tl-sm shadow-sm text-sm text-slate-400 italic">
+                Checking calendar...
+              </div>
+            </div>
+          )}
+
           {(step === "confirm" || step === "done") && (
             <div className="flex justify-start">
-              <div className="bg-white rounded-2xl rounded-tl-sm shadow-sm p-4 w-full max-w-sm space-y-2 text-sm">
+              <div className="bg-white rounded-2xl rounded-tl-sm shadow-sm p-4 w-full max-w-sm space-y-2">
                 <SummaryRow label="Event" value={formData.event_name} />
                 <SummaryRow label="Business Unit" value={formData.business_unit} />
                 <SummaryRow label="Type" value={formData.event_type} />
@@ -225,6 +290,7 @@ export default function SuggestPage() {
                   <SummaryRow label="Location" value={[formData.city, formData.country].filter(Boolean).join(", ")} />
                 )}
                 {formData.why_attend && <SummaryRow label="Why Attend" value={formData.why_attend} />}
+                {formData.event_url && <SummaryRow label="Event URL" value={formData.event_url} />}
               </div>
             </div>
           )}
@@ -234,21 +300,40 @@ export default function SuggestPage() {
       </div>
 
       {/* Input area */}
-      {step !== "done" && (
-        <div className="flex-shrink-0 bg-slate-50 border-t border-slate-200 px-4 py-4">
-          <div className="max-w-xl mx-auto">
-            {step === "confirm" ? (
-              <div className="space-y-2">
-                {error && <p className="text-red-500 text-sm">{error}</p>}
-                <button
-                  onClick={handleSubmit}
-                  disabled={submitting}
-                  className="w-full py-3 bg-slate-700 text-white rounded-full font-medium hover:bg-slate-800 transition-colors disabled:opacity-60 text-sm"
-                >
-                  {submitting ? "Submitting..." : "Submit Suggestion"}
-                </button>
-              </div>
-            ) : isChoiceStep ? (
+      <div className="flex-shrink-0 bg-slate-50 border-t border-slate-200 px-4 py-4">
+        <div className="max-w-xl mx-auto">
+          {duplicateWarning && (
+            <div className="flex gap-2">
+              <button
+                onClick={() => { setDuplicateWarning(false); moveToStep("business_unit"); }}
+                className="flex-1 py-2.5 bg-slate-700 text-white rounded-full text-sm font-medium hover:bg-slate-800 transition-colors"
+              >
+                Continue anyway
+              </button>
+              <button
+                onClick={handleStartOver}
+                className="flex-1 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-full text-sm hover:bg-slate-50 transition-colors"
+              >
+                Start over
+              </button>
+            </div>
+          )}
+
+          {step === "confirm" && (
+            <div className="space-y-2">
+              {error && <p className="text-red-500 text-sm">{error}</p>}
+              <button
+                onClick={handleSubmit}
+                disabled={submitting}
+                className="w-full py-3 bg-slate-700 text-white rounded-full font-medium hover:bg-slate-800 transition-colors disabled:opacity-60 text-sm"
+              >
+                {submitting ? "Submitting..." : "Submit Suggestion"}
+              </button>
+            </div>
+          )}
+
+          {showInput && (
+            isChoiceStep ? (
               <div className="flex flex-wrap gap-2">
                 {getChoices().map((choice) => (
                   <button
@@ -296,10 +381,10 @@ export default function SuggestPage() {
                   </button>
                 )}
               </form>
-            )}
-          </div>
+            )
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }
@@ -308,7 +393,7 @@ function SummaryRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex gap-3">
       <span className="text-slate-500 w-24 shrink-0 text-xs">{label}</span>
-      <span className="text-slate-800 font-medium text-xs">{value}</span>
+      <span className="text-slate-800 font-medium text-xs break-all">{value}</span>
     </div>
   );
 }
