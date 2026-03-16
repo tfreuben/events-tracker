@@ -3,13 +3,13 @@
 import { useState, useRef, useEffect, FormEvent } from "react";
 
 type Step =
-  | "event_url" | "event_name" | "business_unit" | "event_type" | "region"
+  | "submitter_name" | "event_url" | "event_name" | "business_unit" | "event_type" | "region"
   | "start_date" | "end_date" | "location" | "why_attend" | "confirm" | "done";
 
 interface Message { from: "bot" | "user"; text: string; step?: Step }
 
 interface SuggestionData {
-  event_url: string; event_name: string; business_unit: string; event_type: string;
+  submitter_name: string; event_url: string; event_name: string; business_unit: string; event_type: string;
   region: string; start_date: string; end_date: string; city: string; country: string; why_attend: string;
 }
 
@@ -18,6 +18,7 @@ const EVENT_TYPES = ["Conference", "Trade Show", "Forum", "Workshop", "Dinner/Re
 const REGIONS = ["EMEA", "NA", "LATAM"];
 
 const STEP_PROMPTS: Partial<Record<Step, string>> = {
+  submitter_name: "What's your name?",
   event_url: "Do you have a link to the event website? I can use it to auto-fill the details for you. (optional — skip if not)",
   event_name: "What's the name of the event?",
   business_unit: "Which business unit is this for?",
@@ -29,7 +30,7 @@ const STEP_PROMPTS: Partial<Record<Step, string>> = {
   why_attend: "Why should TrustFlight attend? (optional)",
 };
 
-const STEPS: Step[] = ["event_url","event_name","business_unit","event_type","region","start_date","end_date","location","why_attend","confirm","done"];
+const STEPS: Step[] = ["submitter_name","event_url","event_name","business_unit","event_type","region","start_date","end_date","location","why_attend","confirm","done"];
 const AUTO_SKIPPABLE: Step[] = ["event_name","start_date","end_date","location"];
 
 function getNextStep(s: Step): Step {
@@ -48,7 +49,7 @@ function clearFromStep(step: Step, data: SuggestionData): SuggestionData {
   const idx = STEPS.indexOf(step);
   const next = { ...data };
   const fieldMap: Partial<Record<Step, (keyof SuggestionData)[]>> = {
-    event_url: ["event_url"], event_name: ["event_name"], business_unit: ["business_unit"],
+    submitter_name: ["submitter_name"], event_url: ["event_url"], event_name: ["event_name"], business_unit: ["business_unit"],
     event_type: ["event_type"], region: ["region"], start_date: ["start_date"],
     end_date: ["end_date"], location: ["city","country"], why_attend: ["why_attend"],
   };
@@ -67,12 +68,12 @@ function BotAvatar() {
   );
 }
 
-const EMPTY: SuggestionData = { event_url:"", event_name:"", business_unit:"", event_type:"", region:"", start_date:"", end_date:"", city:"", country:"", why_attend:"" };
+const EMPTY: SuggestionData = { submitter_name:"", event_url:"", event_name:"", business_unit:"", event_type:"", region:"", start_date:"", end_date:"", city:"", country:"", why_attend:"" };
 
 export default function SuggestPage() {
   const [messages, setMessages] = useState<Message[]>([
     { from: "bot", text: "Hi! Use this form to suggest an event for TrustFlight to attend." },
-    { from: "bot", text: STEP_PROMPTS.event_url! },
+    { from: "bot", text: STEP_PROMPTS.submitter_name! },
   ]);
   const [step, setStep] = useState<Step>("event_url");
   const [input, setInput] = useState("");
@@ -188,7 +189,8 @@ export default function SuggestPage() {
     const shown = display !== undefined ? display : value;
     if (shown) setMessages(p => [...p, { from: "user", text: shown, step: currentStep }]);
     const newData = { ...formData };
-    if (currentStep === "business_unit") newData.business_unit = value;
+    if (currentStep === "submitter_name") newData.submitter_name = value;
+    else if (currentStep === "business_unit") newData.business_unit = value;
     else if (currentStep === "event_type") newData.event_type = value;
     else if (currentStep === "region") newData.region = value;
     else if (currentStep === "start_date") newData.start_date = value;
@@ -232,7 +234,7 @@ export default function SuggestPage() {
   const handleStartOver = () => {
     setMessages([
       { from: "bot", text: "Hi! Use this form to suggest an event for TrustFlight to attend." },
-      { from: "bot", text: STEP_PROMPTS.event_url! },
+      { from: "bot", text: STEP_PROMPTS.submitter_name! },
     ]);
     setStep("event_url"); setInput(""); setDuplicateWarning(false); setChecking(false);
     setFormData(EMPTY); setPrefilled(new Set());
@@ -305,6 +307,7 @@ export default function SuggestPage() {
             <div className="flex gap-2.5 justify-start">
               <BotAvatar />
               <div className="bg-white border border-slate-100 rounded-2xl rounded-tl-sm shadow-sm p-4 w-full max-w-xs space-y-2.5">
+                {formData.submitter_name && <SummaryRow label="Submitted by" value={formData.submitter_name} />}
                 {formData.event_name && <SummaryRow label="Event" value={formData.event_name} />}
                 {formData.business_unit && <SummaryRow label="Business Unit" value={formData.business_unit} />}
                 {formData.event_type && <SummaryRow label="Type" value={formData.event_type} />}
