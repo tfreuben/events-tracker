@@ -267,12 +267,12 @@ export default function SuggestPage() {
         </div>
 
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto px-4 py-5 space-y-4" style={{ background: "#f8fafc" }}>
+        <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-5 space-y-4" style={{ background: "#f8fafc" }}>
           {messages.map((msg, i) => (
             <div key={i} className={`flex gap-2.5 ${msg.from === "user" ? "justify-end" : "justify-start"}`}>
               {msg.from === "bot" && <BotAvatar />}
               {msg.from === "user" ? (
-                <div className="flex flex-col items-end gap-1 group">
+                <div className="flex flex-col items-end gap-1 group pr-1">
                   <div className="max-w-[78%] px-4 py-2.5 rounded-2xl rounded-tr-sm text-sm leading-relaxed shadow-sm text-white" style={{ background: "linear-gradient(135deg, #0b1a3b, #1e3a6e)" }}>
                     {msg.text}
                   </div>
