@@ -159,8 +159,7 @@ export default function SuggestPage() {
     setChecking(false);
     const newData = { ...formData, event_url: url };
     setFormData(newData);
-    addBot("I couldn't fetch that page, but I've saved the URL. Let's continue.");
-    setTimeout(() => goTo("event_name", newData, prefilled), 700);
+    setTimeout(() => goTo("event_name", newData, prefilled), 350);
   };
 
   const handleEventName = async (name: string) => {
