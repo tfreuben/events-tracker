@@ -150,8 +150,10 @@ export default function SuggestPage() {
         if (d.description) newData.why_attend = d.description;
         setFormData(newData); setPrefilled(newPf); setChecking(false);
         setTimeout(() => {
-          setMessages(p => [...p, { from: "bot", text: found.length > 0 ? `Found it! I've pre-filled: ${found.join(" · ")}. I'll auto-fill those steps — just confirm or update anything that looks off.` : "I couldn't extract details from that page, but I've saved the URL. Let's continue manually." }]);
-          setTimeout(() => goTo("event_name", newData, newPf), 600);
+          if (found.length > 0) {
+            setMessages(p => [...p, { from: "bot", text: `Found it! I've pre-filled: ${found.join(" · ")}. I'll auto-fill those steps — just confirm or update anything that looks off.` }]);
+          }
+          setTimeout(() => goTo("event_name", newData, newPf), found.length > 0 ? 600 : 350);
         }, 350);
         return;
       }
