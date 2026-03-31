@@ -89,8 +89,8 @@ function stripHtmlToText(html: string): string {
   return text;
 }
 
-// Search DuckDuckGo for the event and return the first relevant result URL
-async function searchForEventUrl(eventName: string): Promise<string | null> {
+// Search DuckDuckGo for the event and return up to N unique result URLs
+async function searchForEventUrls(eventName: string, max = 5): Promise<string[]> {
   try {
     const query = `${eventName} 2026 event`;
     const res = await fetch(`https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`, {
@@ -100,22 +100,27 @@ async function searchForEventUrl(eventName: string): Promise<string | null> {
       },
       signal: AbortSignal.timeout(6000),
     });
-    if (!res.ok) return null;
+    if (!res.ok) return [];
     const html = await res.text();
 
-    // Extract uddg= URLs directly from DuckDuckGo HTML results
     const uddgPattern = /uddg=([^&"]+)/g;
-    const match = uddgPattern.exec(html);
-    if (!match) return null;
-
-    // Decode HTML entities first (&amp; -> &), then URI decode
-    const raw = match[1].replace(/&amp;/g, "&");
-    const resultUrl = decodeURIComponent(raw);
-    console.log("[enrich] Web search found URL:", resultUrl);
-    return resultUrl;
+    const seen = new Set<string>();
+    const urls: string[] = [];
+    let match: RegExpExecArray | null;
+    while ((match = uddgPattern.exec(html)) !== null && urls.length < max) {
+      const raw = match[1].replace(/&amp;/g, "&");
+      const resultUrl = decodeURIComponent(raw);
+      const domain = resultUrl.replace(/^https?:\/\//, "").split("/")[0];
+      if (!seen.has(domain)) {
+        seen.add(domain);
+        urls.push(resultUrl);
+      }
+    }
+    console.log("[enrich] Web search found URLs:", urls);
+    return urls;
   } catch (err) {
     console.error("[enrich] Web search failed:", err);
-    return null;
+    return [];
   }
 }
 
@@ -236,13 +241,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(result);
     }
 
-    // Name-only: search the web first, then fall back to Claude's knowledge
-    const foundUrl = await searchForEventUrl(event_name);
-    console.log("[enrich] Search result URL:", foundUrl);
-    if (foundUrl) {
+    // Name-only: search the web, try multiple results until one yields good data
+    const foundUrls = await searchForEventUrls(event_name);
+    for (const foundUrl of foundUrls) {
+      console.log("[enrich] Trying URL:", foundUrl);
       const webResult = await fetchAndExtract(foundUrl);
       console.log("[enrich] Web extraction result:", JSON.stringify(webResult));
-      if (webResult.event_name || webResult.start_date || webResult.city) {
+      if (webResult.start_date || webResult.city) {
         return NextResponse.json(webResult);
       }
     }
