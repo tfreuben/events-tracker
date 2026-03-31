@@ -212,6 +212,8 @@ async function fetchAndExtract(url: string): Promise<EnrichedEvent> {
       venue: aiResult.venue || fallback.venue,
       target_audience: aiResult.target_audience,
       key_topics: aiResult.key_topics,
+      region: aiResult.region,
+      event_type: aiResult.event_type,
     };
   }
 
