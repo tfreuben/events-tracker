@@ -90,9 +90,10 @@ function stripHtmlToText(html: string): string {
 }
 
 // Search DuckDuckGo for the event and return up to N unique result URLs
-async function searchForEventUrls(eventName: string, max = 5): Promise<string[]> {
+async function searchForEventUrls(eventName: string, year?: number, max = 5): Promise<string[]> {
   try {
-    const query = `${eventName} 2026 event`;
+    const searchYear = year || new Date().getFullYear();
+    const query = `${eventName} ${searchYear} event`;
     const res = await fetch(`https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`, {
       headers: {
         "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -250,18 +251,30 @@ export async function POST(req: NextRequest) {
     }
 
     // Name-only: search the web, try multiple results until one yields good data
-    const foundUrls = await searchForEventUrls(event_name);
-    for (const foundUrl of foundUrls) {
-      console.log("[enrich] Trying URL:", foundUrl);
-      const webResult = await fetchAndExtract(foundUrl);
-      console.log("[enrich] Web extraction result:", JSON.stringify(webResult));
-      if (isEventPast(webResult)) {
-        console.log("[enrich] Skipping past event:", webResult.end_date || webResult.start_date);
+    // If all results are past events, retry with next year
+    const currentYear = new Date().getFullYear();
+    let hadPastResults = false;
+
+    for (const year of [currentYear, currentYear + 1]) {
+      const foundUrls = await searchForEventUrls(event_name, year);
+      for (const foundUrl of foundUrls) {
+        console.log("[enrich] Trying URL:", foundUrl);
+        const webResult = await fetchAndExtract(foundUrl);
+        console.log("[enrich] Web extraction result:", JSON.stringify(webResult));
+        if (isEventPast(webResult)) {
+          console.log("[enrich] Skipping past event:", webResult.end_date || webResult.start_date);
+          hadPastResults = true;
+          continue;
+        }
+        if (webResult.start_date || webResult.city) {
+          return NextResponse.json(webResult);
+        }
+      }
+      if (hadPastResults && year === currentYear) {
+        console.log(`[enrich] All ${currentYear} results were past events, retrying with ${currentYear + 1}`);
         continue;
       }
-      if (webResult.start_date || webResult.city) {
-        return NextResponse.json(webResult);
-      }
+      break;
     }
 
     // Fall back to Claude's knowledge
