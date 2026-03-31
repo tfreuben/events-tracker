@@ -200,10 +200,22 @@ export function EventsTable() {
     ];
   }, [isAdmin, handleDelete]);
 
+  const COST_COLUMNS = [
+    "event_booth_cost", "est_daily_rate", "total_daily_rate",
+    "flight_cost_per_person", "total_flight_cost", "total_travel_cost", "total_event_cost",
+  ];
+
+  const effectiveVisibility = useMemo(() => {
+    if (isAdmin) return columnVisibility;
+    const hidden: Record<string, boolean> = { ...columnVisibility };
+    for (const col of COST_COLUMNS) hidden[col] = false;
+    return hidden;
+  }, [isAdmin, columnVisibility]);
+
   const table = useReactTable({
     data: displayEvents,
     columns: columnsWithActions,
-    state: { sorting, columnVisibility },
+    state: { sorting, columnVisibility: effectiveVisibility },
     onSortingChange: setSorting,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),

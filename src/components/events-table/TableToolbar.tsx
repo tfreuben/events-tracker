@@ -149,6 +149,8 @@ export function TableToolbar({ filters, onFilterChange, onExportCSV, onAddEvent,
                 {columns.map((col) => {
                   const id = (col as { accessorKey?: string }).accessorKey;
                   if (!id) return null;
+                  const costCols = ["event_booth_cost", "est_daily_rate", "total_daily_rate", "flight_cost_per_person", "total_flight_cost", "total_travel_cost", "total_event_cost"];
+                  if (!isAdmin && costCols.includes(id)) return null;
                   const isVisible = columnVisibility[id] !== false;
                   return (
                     <label

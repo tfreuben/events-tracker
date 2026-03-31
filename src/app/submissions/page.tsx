@@ -11,6 +11,30 @@ import { cn } from "@/lib/utils";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
+function parsePreEventGoals(goals: string | null): { submittedBy: string | null; whyAttend: string | null } {
+  if (!goals) return { submittedBy: null, whyAttend: null };
+
+  let submittedBy: string | null = null;
+  let whyAttend: string | null = null;
+
+  for (const line of goals.split("\n")) {
+    const trimmed = line.trim();
+    if (trimmed.startsWith("Submitted by:")) {
+      submittedBy = trimmed.replace(/^Submitted by:\s*/i, "");
+    } else if (trimmed.startsWith("Why attend:")) {
+      whyAttend = trimmed.replace(/^Why attend:\s*/i, "");
+    }
+  }
+
+  // Backwards compatibility: if no "Why attend:" prefix found and no "Submitted by:" either,
+  // the whole string is just the old submitter-only format
+  if (!submittedBy && !whyAttend) {
+    submittedBy = goals.replace(/^Submitted by:\s*/i, "");
+  }
+
+  return { submittedBy, whyAttend };
+}
+
 export default function SubmissionsPage() {
   const { isAdmin } = useAuthStore();
   const { data: events = [], mutate, isLoading } = useSWR<TFEvent[]>(
@@ -68,9 +92,7 @@ export default function SubmissionsPage() {
       </p>
       {events.map((event) => {
         const buColor = BU_COLORS[event.business_unit];
-        const submittedBy = event.pre_event_goals
-          ? event.pre_event_goals.replace(/^Submitted by:\s*/i, "")
-          : null;
+        const { submittedBy, whyAttend } = parsePreEventGoals(event.pre_event_goals);
         const location = [event.city, event.country].filter(Boolean).join(", ");
         const dateRange = event.start_date
           ? event.end_date && event.end_date !== event.start_date
@@ -106,6 +128,7 @@ export default function SubmissionsPage() {
                 <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-600">
                   {dateRange && <span>{dateRange}</span>}
                   {location && <span>{location}</span>}
+                  {event.venue && <span>{event.venue}</span>}
                   <span>{event.region}</span>
                 </div>
                 {event.event_website_url && (
@@ -121,8 +144,26 @@ export default function SubmissionsPage() {
                 )}
                 {event.event_description && (
                   <p className="text-sm text-slate-700 mt-1 leading-relaxed">
-                    <span className="font-medium">Why attend: </span>
+                    <span className="font-medium">About: </span>
                     {event.event_description}
+                  </p>
+                )}
+                {event.target_audience && (
+                  <p className="text-sm text-slate-600 leading-relaxed">
+                    <span className="font-medium">Audience: </span>
+                    {event.target_audience}
+                  </p>
+                )}
+                {event.key_topics && (
+                  <p className="text-sm text-slate-600 leading-relaxed">
+                    <span className="font-medium">Topics: </span>
+                    {event.key_topics}
+                  </p>
+                )}
+                {whyAttend && (
+                  <p className="text-sm text-slate-700 mt-1 leading-relaxed">
+                    <span className="font-medium">Why attend: </span>
+                    {whyAttend}
                   </p>
                 )}
                 {submittedBy && (

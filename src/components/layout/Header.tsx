@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Lock, LogOut, LayoutDashboard, Table2, Inbox } from "lucide-react";
+import { Lock, LogOut, LayoutDashboard, Table2, Inbox, MessageSquarePlus } from "lucide-react";
 import { useAuthStore } from "@/lib/store";
 import { useState } from "react";
 import { AdminGate } from "./AdminGate";
@@ -34,30 +34,47 @@ export function Header() {
                 <Table2 size={15} />
                 Events
               </Link>
-              <Link
-                href="/budget"
-                className={cn(
-                  "flex items-center gap-1.5 px-3 py-1.5 rounded text-sm transition-colors",
-                  pathname === "/budget"
-                    ? "bg-white/15 text-white"
-                    : "text-white/70 hover:text-white hover:bg-white/10"
-                )}
-              >
-                <LayoutDashboard size={15} />
-                Budget
-              </Link>
-              <Link
-                href="/submissions"
-                className={cn(
-                  "flex items-center gap-1.5 px-3 py-1.5 rounded text-sm transition-colors",
-                  pathname === "/submissions"
-                    ? "bg-white/15 text-white"
-                    : "text-white/70 hover:text-white hover:bg-white/10"
-                )}
-              >
-                <Inbox size={15} />
-                Submissions
-              </Link>
+              {isAdmin && (
+                <Link
+                  href="/budget"
+                  className={cn(
+                    "flex items-center gap-1.5 px-3 py-1.5 rounded text-sm transition-colors",
+                    pathname === "/budget"
+                      ? "bg-white/15 text-white"
+                      : "text-white/70 hover:text-white hover:bg-white/10"
+                  )}
+                >
+                  <LayoutDashboard size={15} />
+                  Budget
+                </Link>
+              )}
+              {isAdmin ? (
+                <Link
+                  href="/submissions"
+                  className={cn(
+                    "flex items-center gap-1.5 px-3 py-1.5 rounded text-sm transition-colors",
+                    pathname === "/submissions"
+                      ? "bg-white/15 text-white"
+                      : "text-white/70 hover:text-white hover:bg-white/10"
+                  )}
+                >
+                  <Inbox size={15} />
+                  Submissions
+                </Link>
+              ) : (
+                <Link
+                  href="/suggest"
+                  className={cn(
+                    "flex items-center gap-1.5 px-3 py-1.5 rounded text-sm transition-colors",
+                    pathname === "/suggest"
+                      ? "bg-white/15 text-white"
+                      : "text-white/70 hover:text-white hover:bg-white/10"
+                  )}
+                >
+                  <MessageSquarePlus size={15} />
+                  Suggest
+                </Link>
+              )}
             </nav>
           </div>
           <div>
