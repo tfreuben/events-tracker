@@ -225,6 +225,14 @@ async function fetchAndExtract(url: string): Promise<EnrichedEvent> {
   return fallbackHtmlExtract(html);
 }
 
+function isEventPast(result: EnrichedEvent): boolean {
+  const checkDate = result.end_date || result.start_date;
+  if (!checkDate) return false;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return new Date(checkDate + "T00:00:00") < today;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -247,6 +255,10 @@ export async function POST(req: NextRequest) {
       console.log("[enrich] Trying URL:", foundUrl);
       const webResult = await fetchAndExtract(foundUrl);
       console.log("[enrich] Web extraction result:", JSON.stringify(webResult));
+      if (isEventPast(webResult)) {
+        console.log("[enrich] Skipping past event:", webResult.end_date || webResult.start_date);
+        continue;
+      }
       if (webResult.start_date || webResult.city) {
         return NextResponse.json(webResult);
       }
@@ -254,6 +266,11 @@ export async function POST(req: NextRequest) {
 
     // Fall back to Claude's knowledge
     const aiResult = await enrichWithClaude(event_name, "name");
+    if (isEventPast(aiResult)) {
+      console.log("[enrich] AI result is past event, clearing dates");
+      aiResult.start_date = null;
+      aiResult.end_date = null;
+    }
     return NextResponse.json(aiResult);
   } catch (err) {
     console.error("enrich-event:", err);
