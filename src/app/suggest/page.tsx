@@ -475,7 +475,7 @@ export default function SuggestPage() {
           {isDone && (
             <div className="flex gap-2">
               <button onClick={handleStartOver} className="flex-1 py-2.5 rounded-xl text-sm font-medium text-slate-500 hover:text-slate-700 hover:bg-slate-50 transition-colors">Submit another</button>
-              <button onClick={() => window.close()} className="flex-1 py-2.5 rounded-xl text-sm font-medium text-white hover:opacity-90 transition-opacity" style={{ background: "linear-gradient(135deg, #0b1a3b, #1e3a6e)" }}>Close</button>
+              <button onClick={() => window.location.href = "/"} className="flex-1 py-2.5 rounded-xl text-sm font-medium text-white hover:opacity-90 transition-opacity" style={{ background: "linear-gradient(135deg, #0b1a3b, #1e3a6e)" }}>View Events</button>
             </div>
           )}
           {showInput && (
