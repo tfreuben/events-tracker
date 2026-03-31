@@ -89,11 +89,23 @@ function stripHtmlToText(html: string): string {
   return text;
 }
 
-// Search DuckDuckGo for the event and return up to N unique result URLs
+// Search for event URLs using multiple search engines for reliability
 async function searchForEventUrls(eventName: string, year?: number, max = 5): Promise<string[]> {
+  const searchYear = year || new Date().getFullYear();
+  const query = `${eventName} ${searchYear} event`;
+  const urls: string[] = [];
+  const seenDomains = new Set<string>();
+
+  function addUrl(url: string) {
+    const domain = url.replace(/^https?:\/\//, "").split("/")[0];
+    if (!seenDomains.has(domain) && urls.length < max) {
+      seenDomains.add(domain);
+      urls.push(url);
+    }
+  }
+
+  // Try DuckDuckGo
   try {
-    const searchYear = year || new Date().getFullYear();
-    const query = `${eventName} ${searchYear} event`;
     const res = await fetch(`https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`, {
       headers: {
         "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -101,28 +113,41 @@ async function searchForEventUrls(eventName: string, year?: number, max = 5): Pr
       },
       signal: AbortSignal.timeout(6000),
     });
-    if (!res.ok) return [];
-    const html = await res.text();
-
-    const uddgPattern = /uddg=([^&"]+)/g;
-    const seen = new Set<string>();
-    const urls: string[] = [];
-    let match: RegExpExecArray | null;
-    while ((match = uddgPattern.exec(html)) !== null && urls.length < max) {
-      const raw = match[1].replace(/&amp;/g, "&");
-      const resultUrl = decodeURIComponent(raw);
-      const domain = resultUrl.replace(/^https?:\/\//, "").split("/")[0];
-      if (!seen.has(domain)) {
-        seen.add(domain);
-        urls.push(resultUrl);
+    if (res.ok) {
+      const html = await res.text();
+      const uddgPattern = /uddg=([^&"]+)/g;
+      let match: RegExpExecArray | null;
+      while ((match = uddgPattern.exec(html)) !== null) {
+        const raw = match[1].replace(/&amp;/g, "&");
+        addUrl(decodeURIComponent(raw));
       }
     }
-    console.log("[enrich] Web search found URLs:", urls);
-    return urls;
-  } catch (err) {
-    console.error("[enrich] Web search failed:", err);
-    return [];
+  } catch (err) { console.error("[enrich] DDG search failed:", err); }
+
+  // If DDG returned nothing, try Google search scraping as fallback
+  if (urls.length === 0) {
+    try {
+      const gRes = await fetch(`https://www.google.com/search?q=${encodeURIComponent(query)}&num=5`, {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+          Accept: "text/html",
+        },
+        signal: AbortSignal.timeout(6000),
+      });
+      if (gRes.ok) {
+        const html = await gRes.text();
+        const linkPattern = /href="\/url\?q=([^&"]+)/g;
+        let match: RegExpExecArray | null;
+        while ((match = linkPattern.exec(html)) !== null) {
+          const url = decodeURIComponent(match[1]);
+          if (url.startsWith("http") && !url.includes("google.com")) addUrl(url);
+        }
+      }
+    } catch (err) { console.error("[enrich] Google search failed:", err); }
   }
+
+  console.log(`[enrich] Search for "${query}" found URLs:`, urls);
+  return urls;
 }
 
 async function enrichWithClaude(content: string, source: "url" | "name"): Promise<EnrichedEvent> {
@@ -278,11 +303,14 @@ export async function POST(req: NextRequest) {
     }
 
     // Fall back to Claude's knowledge
-    const aiResult = await enrichWithClaude(event_name, "name");
+    let aiResult = await enrichWithClaude(event_name, "name");
     if (isEventPast(aiResult)) {
-      console.log("[enrich] AI result is past event, clearing dates");
-      aiResult.start_date = null;
-      aiResult.end_date = null;
+      console.log("[enrich] AI result is past event, retrying with next year");
+      aiResult = await enrichWithClaude(`${event_name} ${currentYear + 1}`, "name");
+      if (isEventPast(aiResult)) {
+        aiResult.start_date = null;
+        aiResult.end_date = null;
+      }
     }
     return NextResponse.json(aiResult);
   } catch (err) {
