@@ -156,12 +156,14 @@ async function enrichWithClaude(content: string, source: "url" | "name"): Promis
 
   const client = new Anthropic({ apiKey });
 
+  const today = new Date().toISOString().slice(0, 10);
   const currentYear = new Date().getFullYear();
-  const systemPrompt = `You extract structured event information. Return ONLY valid JSON with these fields:
+  const systemPrompt = source === "url"
+    ? `You extract structured event information from webpage content. Return ONLY valid JSON with these fields:
 {
   "event_name": "string or null - the official event name",
   "event_description": "1-2 sentence description of the event or null",
-  "start_date": "YYYY-MM-DD or null - for the ${currentYear} or next upcoming edition",
+  "start_date": "YYYY-MM-DD or null",
   "end_date": "YYYY-MM-DD or null",
   "city": "string or null",
   "country": "string or null",
@@ -171,15 +173,33 @@ async function enrichWithClaude(content: string, source: "url" | "name"): Promis
   "region": "EMEA, NA, LATAM, or APAC based on location - null if unknown",
   "event_type": "Conference/Trade Show, Forum, Workshop, or Dinner/Reception - null if unknown"
 }
-No markdown, no explanation, just the JSON object. Always try to determine dates, location, and region.`;
+No markdown, no explanation, just the JSON object.`
+    : `You are an expert on industry events, conferences, and trade shows worldwide. Today is ${today}. The user will give you an event name. Return details about the NEXT UPCOMING edition (on or after today). If the ${currentYear} edition has already passed, return the ${currentYear + 1} edition instead. Consider that events may have been renamed (e.g. Heli-Expo became Verticon). Return ONLY valid JSON:
+{
+  "event_name": "string or null - the official event name including year",
+  "event_description": "1-2 sentence description or null",
+  "start_date": "YYYY-MM-DD or null - MUST be on or after ${today}",
+  "end_date": "YYYY-MM-DD or null",
+  "city": "string or null",
+  "country": "string or null",
+  "venue": "venue name or null",
+  "target_audience": "brief description of who attends or null",
+  "key_topics": "comma-separated topics or null",
+  "region": "EMEA, NA, LATAM, or APAC based on location - null if unknown",
+  "event_type": "Conference/Trade Show, Forum, Workshop, or Dinner/Reception - null if unknown"
+}
+No markdown, no explanation, just the JSON object. Try your best to provide dates, city, country, and venue.`;
 
   const userPrompt = source === "url"
     ? `Extract event details from this webpage content. Pay close attention to dates, location, and venue:\n\n${content}`
-    : `What do you know about this event? Return details about the ${currentYear} or next upcoming edition, including dates, location, and venue:\n\n${content}`;
+    : `What do you know about this event? Return the next upcoming edition (after ${today}):\n\n${content}`;
+
+  // Use Sonnet for name-only lookups (more world knowledge), Haiku for URL extraction (speed)
+  const model = source === "name" ? "claude-sonnet-4-5-20250929" : "claude-haiku-4-5-20251001";
 
   try {
     const response = await client.messages.create({
-      model: "claude-haiku-4-5-20251001",
+      model,
       max_tokens: 500,
       system: systemPrompt,
       messages: [{ role: "user", content: userPrompt }],
@@ -302,15 +322,13 @@ export async function POST(req: NextRequest) {
       break;
     }
 
-    // Fall back to Claude's knowledge
-    let aiResult = await enrichWithClaude(event_name, "name");
+    // Fall back to Claude's knowledge (uses Sonnet for better world knowledge)
+    console.log("[enrich] Falling back to Claude knowledge for:", event_name);
+    const aiResult = await enrichWithClaude(event_name, "name");
     if (isEventPast(aiResult)) {
-      console.log("[enrich] AI result is past event, retrying with next year");
-      aiResult = await enrichWithClaude(`${event_name} ${currentYear + 1}`, "name");
-      if (isEventPast(aiResult)) {
-        aiResult.start_date = null;
-        aiResult.end_date = null;
-      }
+      console.log("[enrich] AI result is still past, clearing dates");
+      aiResult.start_date = null;
+      aiResult.end_date = null;
     }
     return NextResponse.json(aiResult);
   } catch (err) {
