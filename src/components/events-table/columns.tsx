@@ -36,6 +36,18 @@ export const columns: ColumnDef<TFEvent>[] = [
     size: 280,
   },
   {
+    accessorKey: "start_date",
+    header: ({ column }) => <SortHeader column={column} label="Start Date" />,
+    cell: ({ row }) => formatDate(row.original.start_date),
+    size: 110,
+  },
+  {
+    accessorKey: "end_date",
+    header: ({ column }) => <SortHeader column={column} label="End Date" />,
+    cell: ({ row }) => formatDate(row.original.end_date),
+    size: 110,
+  },
+  {
     accessorKey: "business_unit",
     header: ({ column }) => <SortHeader column={column} label="Business Unit" />,
     cell: ({ row }) => {
@@ -79,18 +91,6 @@ export const columns: ColumnDef<TFEvent>[] = [
     accessorKey: "venue",
     header: "Venue",
     size: 180,
-  },
-  {
-    accessorKey: "start_date",
-    header: ({ column }) => <SortHeader column={column} label="Start Date" />,
-    cell: ({ row }) => formatDate(row.original.start_date),
-    size: 110,
-  },
-  {
-    accessorKey: "end_date",
-    header: ({ column }) => <SortHeader column={column} label="End Date" />,
-    cell: ({ row }) => formatDate(row.original.end_date),
-    size: 110,
   },
   {
     accessorKey: "number_of_days",
