@@ -40,7 +40,7 @@ export function EventsTable() {
     region: "",
     eventType: "",
     search: "",
-    timeframe: "",
+    timeframe: "upcoming",
   });
 
   const { timeframe, ...serverFilters } = filters;
@@ -153,12 +153,14 @@ export function EventsTable() {
     if (timeframe === "upcoming") {
       filtered = events.filter((e) => {
         if (!e.end_date) return true;
-        return new Date(e.end_date + "T00:00:00") >= today;
+        const datePart = e.end_date.substring(0, 10);
+        return new Date(datePart + "T00:00:00") >= today;
       });
     } else if (timeframe === "past") {
       filtered = events.filter((e) => {
         if (!e.end_date) return false;
-        return new Date(e.end_date + "T00:00:00") < today;
+        const datePart = e.end_date.substring(0, 10);
+        return new Date(datePart + "T00:00:00") < today;
       });
     }
 
@@ -266,7 +268,7 @@ export function EventsTable() {
                 return table.getRowModel().rows.map((row) => {
                 const allBus: string[] = (row.original as TFEvent & { _all_bus?: string[] })._all_bus || [row.original.business_unit];
                 const buColor = allBus.length === 1 ? BU_COLORS[allBus[0]] : null;
-                const endDate = row.original.end_date ? new Date(row.original.end_date + 'T00:00:00') : null;
+                const endDate = row.original.end_date ? new Date(row.original.end_date.substring(0, 10) + 'T00:00:00') : null;
                 const isPast = endDate !== null && endDate < today;
                 return (
                   <tr
