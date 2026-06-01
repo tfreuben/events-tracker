@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Lock, LogOut, LayoutDashboard, Table2, Inbox, MessageSquarePlus } from "lucide-react";
+import { Lock, LogOut, LayoutDashboard, Table2, Inbox, MessageSquarePlus, Bell } from "lucide-react";
 import { useAuthStore } from "@/lib/store";
 import { useState } from "react";
 import { AdminGate } from "./AdminGate";
@@ -46,6 +46,20 @@ export function Header() {
                 >
                   <LayoutDashboard size={15} />
                   Budget
+                </Link>
+              )}
+              {isAdmin && (
+                <Link
+                  href="/alerts"
+                  className={cn(
+                    "flex items-center gap-1.5 px-3 py-1.5 rounded text-sm transition-colors",
+                    pathname === "/alerts"
+                      ? "bg-white/15 text-white"
+                      : "text-white/70 hover:text-white hover:bg-white/10"
+                  )}
+                >
+                  <Bell size={15} />
+                  Alerts
                 </Link>
               )}
               {isAdmin ? (

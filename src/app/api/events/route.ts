@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
     INSERT INTO events (
       event_name, business_unit, event_type, region, city, country, venue,
       start_date, end_date, number_of_days, sales_staff_attending, staff_names,
-      event_booth_cost, est_daily_rate, total_daily_rate, flight_cost_per_person,
+      staff_emails, event_booth_cost, est_daily_rate, total_daily_rate, flight_cost_per_person,
       total_flight_cost, total_travel_cost, total_event_cost, budget_month,
       status, sponsorship_level, booth_number, event_website_url,
       event_description, target_audience, key_topics, products_to_feature,
@@ -78,7 +78,7 @@ export async function POST(req: NextRequest) {
       ${event.region}, ${event.city || null}, ${event.country || null},
       ${event.venue || null}, ${event.start_date || null}, ${event.end_date || null},
       ${event.number_of_days}, ${event.sales_staff_attending}, ${event.staff_names || null},
-      ${event.event_booth_cost}, ${event.est_daily_rate}, ${event.total_daily_rate},
+      ${event.staff_emails || null}, ${event.event_booth_cost}, ${event.est_daily_rate}, ${event.total_daily_rate},
       ${event.flight_cost_per_person}, ${event.total_flight_cost}, ${event.total_travel_cost},
       ${event.total_event_cost}, ${event.budget_month}, ${event.status || 'Planned'},
       ${event.sponsorship_level || null}, ${event.booth_number || null},

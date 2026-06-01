@@ -6,7 +6,7 @@ import { computeCosts } from "@/lib/computations";
 const UPDATABLE_FIELDS = [
   "event_name", "business_unit", "event_type", "region", "city", "country",
   "venue", "start_date", "end_date", "number_of_days", "sales_staff_attending",
-  "staff_names", "event_booth_cost", "est_daily_rate", "flight_cost_per_person",
+  "staff_names", "staff_emails", "event_booth_cost", "est_daily_rate", "flight_cost_per_person",
   "budget_month", "status", "sponsorship_level", "booth_number",
   "event_website_url", "event_description", "target_audience", "key_topics",
   "products_to_feature", "pre_event_goals", "post_event_notes",

@@ -12,6 +12,7 @@ export interface TFEvent {
   number_of_days: number;
   sales_staff_attending: number;
   staff_names: string | null;
+  staff_emails: string | null;
   event_booth_cost: number;
   est_daily_rate: number;
   total_daily_rate: number;
@@ -55,3 +56,33 @@ export interface AuthState {
 }
 
 export type ColumnVisibilityState = Record<string, boolean>;
+
+export interface AlertRecipient {
+  id: number;
+  business_unit: string;
+  emails: string;
+  updated_at: string;
+}
+
+export interface AlertSend {
+  id: number;
+  event_id: number;
+  touchpoint_code: string;
+  due_date: string;
+  recipients: string;
+  hubspot_message_ids: string | null;
+  status: "sent" | "failed" | "skipped_no_recipients";
+  error: string | null;
+  sent_at: string;
+}
+
+export interface UpcomingTouchpoint {
+  event_id: number;
+  event_name: string;
+  business_unit: string;
+  start_date: string;
+  touchpoint_code: string;
+  touchpoint_subject: string;
+  due_date: string;
+  resolved_recipients: string[];
+}
