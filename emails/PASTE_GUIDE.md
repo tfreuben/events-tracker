@@ -4,7 +4,8 @@ One-time setup. Repeat for each of the six touchpoints.
 
 ## Prerequisites
 - HubSpot account with **Transactional Email add-on** enabled (paid add-on; check Marketing > Email > New email > Transactional appears).
-- A verified sender address (e.g. `marketing@trustflight.com`) under Marketing > Email > Settings > Sender details.
+- A verified sender address under Marketing > Email > Settings > Sender details.
+- A HubSpot **Service Account** with a service key that has the `transactional-email` scope. Generate under Settings > Integrations > Service Accounts. The key is set in Northflank as `HUBSPOT_API_TOKEN`. (The older `HUBSPOT_PRIVATE_APP_TOKEN` env var is also still honored for backwards compatibility, but service accounts are the going-forward path.)
 
 ## Per-template steps
 1. In HubSpot: Marketing > Email > Create email > **Transactional**.

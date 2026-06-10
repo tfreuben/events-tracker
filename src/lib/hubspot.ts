@@ -17,9 +17,9 @@ export interface SendTransactionalResult {
 export async function sendTransactional(
   args: SendTransactionalArgs
 ): Promise<SendTransactionalResult> {
-  const token = process.env.HUBSPOT_PRIVATE_APP_TOKEN;
+  const token = process.env.HUBSPOT_API_TOKEN || process.env.HUBSPOT_PRIVATE_APP_TOKEN;
   if (!token) {
-    return { ok: false, error: "HUBSPOT_PRIVATE_APP_TOKEN not set" };
+    return { ok: false, error: "HUBSPOT_API_TOKEN not set" };
   }
 
   const from = args.from || process.env.ALERT_FROM_EMAIL;
