@@ -3,14 +3,14 @@
 import { useState, useRef, useEffect, FormEvent } from "react";
 
 type Step =
-  | "event_name" | "submitter_name" | "business_unit" | "event_type" | "region"
+  | "event_name" | "submitter_name" | "submitter_email" | "business_unit" | "event_type" | "region"
   | "start_date" | "end_date" | "location" | "venue" | "event_description" | "target_audience"
   | "key_topics" | "why_attend" | "confirm" | "done";
 
 interface Message { from: "bot" | "user"; text: string; step?: Step }
 
 interface SuggestionData {
-  submitter_name: string; event_url: string; event_name: string; business_unit: string; event_type: string;
+  submitter_name: string; submitter_email: string; event_url: string; event_name: string; business_unit: string; event_type: string;
   region: string; start_date: string; end_date: string; city: string; country: string;
   venue: string; event_description: string; target_audience: string; key_topics: string; why_attend: string;
 }
@@ -22,6 +22,7 @@ const REGIONS = ["EMEA", "NA", "LATAM", "APAC"];
 const STEP_PROMPTS: Partial<Record<Step, string>> = {
   event_name: "What's the name of the event?",
   submitter_name: "And your name?",
+  submitter_email: "What's your email address? So we can let you know if it's approved.",
   business_unit: "Which brand is this for?",
   event_type: "What type of event is it?",
   region: "Which region?",
@@ -36,7 +37,7 @@ const STEP_PROMPTS: Partial<Record<Step, string>> = {
 };
 
 const STEPS: Step[] = [
-  "event_name", "submitter_name", "business_unit", "event_type", "region",
+  "event_name", "submitter_name", "submitter_email", "business_unit", "event_type", "region",
   "start_date", "end_date", "location", "venue", "event_description", "target_audience",
   "key_topics", "why_attend", "confirm", "done",
 ];
@@ -64,7 +65,7 @@ function clearFromStep(step: Step, data: SuggestionData): SuggestionData {
   const idx = STEPS.indexOf(step);
   const next = { ...data };
   const fieldMap: Partial<Record<Step, (keyof SuggestionData)[]>> = {
-    event_name: ["event_name", "event_url"], submitter_name: ["submitter_name"], business_unit: ["business_unit"],
+    event_name: ["event_name", "event_url"], submitter_name: ["submitter_name"], submitter_email: ["submitter_email"], business_unit: ["business_unit"],
     event_type: ["event_type"], region: ["region"], start_date: ["start_date"],
     end_date: ["end_date"], location: ["city", "country"], venue: ["venue"],
     event_description: ["event_description"], target_audience: ["target_audience"],
@@ -103,7 +104,7 @@ function cleanseData(data: SuggestionData): SuggestionData {
 }
 
 const EMPTY: SuggestionData = {
-  submitter_name: "", event_url: "", event_name: "", business_unit: "", event_type: "",
+  submitter_name: "", submitter_email: "", event_url: "", event_name: "", business_unit: "", event_type: "",
   region: "", start_date: "", end_date: "", city: "", country: "",
   venue: "", event_description: "", target_audience: "", key_topics: "", why_attend: "",
 };
@@ -261,6 +262,7 @@ export default function SuggestPage() {
     if (shown) setMessages(p => [...p, { from: "user", text: shown, step: currentStep }]);
     const newData = { ...formData };
     if (currentStep === "submitter_name") newData.submitter_name = value;
+    else if (currentStep === "submitter_email") newData.submitter_email = value;
     else if (currentStep === "business_unit") newData.business_unit = value;
     else if (currentStep === "event_type") newData.event_type = value;
     else if (currentStep === "region") newData.region = value;
@@ -289,6 +291,14 @@ export default function SuggestPage() {
     e.preventDefault();
     if (!input.trim()) return;
     if (step === "event_name") handleEventName(input.trim());
+    else if (step === "submitter_email") {
+      const value = input.trim();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+        setMessages(p => [...p, { from: "bot", text: "That doesn't look like a valid email address. Please try again." }]);
+        return;
+      }
+      advance(step, value);
+    }
     else advance(step, input.trim());
   };
 
@@ -403,6 +413,7 @@ export default function SuggestPage() {
               <BotAvatar />
               <div className="bg-white border border-slate-100 rounded-2xl rounded-tl-sm shadow-sm p-4 w-full max-w-xs space-y-2.5">
                 {formData.submitter_name && <SummaryRow label="Submitted by" value={formData.submitter_name} />}
+                {formData.submitter_email && <SummaryRow label="Email" value={formData.submitter_email} />}
                 {formData.event_name && <SummaryRow label="Event" value={formData.event_name} />}
                 {formData.business_unit && <SummaryRow label="Brand" value={formData.business_unit} />}
                 {formData.event_type && <SummaryRow label="Type" value={formData.event_type} />}
@@ -425,6 +436,7 @@ export default function SuggestPage() {
               <div className="bg-white border border-slate-100 rounded-2xl rounded-tl-sm shadow-sm p-4 w-full max-w-xs space-y-3">
                 <EditableRow label="Event" value={formData.event_name} onChange={v => setFormData(p => ({ ...p, event_name: v }))} />
                 <EditableRow label="Submitted by" value={formData.submitter_name} onChange={v => setFormData(p => ({ ...p, submitter_name: v }))} />
+                <EditableRow label="Email" value={formData.submitter_email} onChange={v => setFormData(p => ({ ...p, submitter_email: v }))} />
                 <EditableRow label="Brand" value={formData.business_unit} onChange={v => setFormData(p => ({ ...p, business_unit: v }))} />
                 <EditableRow label="Type" value={formData.event_type} onChange={v => setFormData(p => ({ ...p, event_type: v }))} />
                 <EditableRow label="Region" value={formData.region} onChange={v => setFormData(p => ({ ...p, region: v }))} />
