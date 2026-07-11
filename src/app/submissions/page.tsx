@@ -6,7 +6,7 @@ import { TFEvent } from "@/types";
 import { BU_COLORS } from "@/lib/constants";
 import { formatDate } from "@/lib/utils";
 import { useAuthStore } from "@/lib/store";
-import { Loader2, CheckCircle, Trash2, ExternalLink, Inbox } from "lucide-react";
+import { Loader2, CheckCircle, XCircle, Trash2, ExternalLink, Inbox } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
@@ -45,10 +45,20 @@ export default function SubmissionsPage() {
 
   const handleApprove = useCallback(
     async (eventId: number) => {
-      const res = await fetch(`/api/events/${eventId}`, {
-        method: "PUT",
+      const res = await fetch(`/api/events/${eventId}/approve`, { method: "POST" });
+      if (res.ok) mutate();
+    },
+    [mutate]
+  );
+
+  const handleDecline = useCallback(
+    async (eventId: number) => {
+      const reason = prompt("Reason for declining (optional):");
+      if (reason === null) return;
+      const res = await fetch(`/api/events/${eventId}/decline`, {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "Planned" }),
+        body: JSON.stringify({ reason }),
       });
       if (res.ok) mutate();
     },
@@ -178,6 +188,13 @@ export default function SubmissionsPage() {
                   >
                     <CheckCircle size={14} />
                     Approve
+                  </button>
+                  <button
+                    onClick={() => handleDecline(event.id)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-red-50 text-red-600 rounded hover:bg-red-100 transition-colors"
+                  >
+                    <XCircle size={14} />
+                    Decline
                   </button>
                   <button
                     onClick={() => handleDelete(event.id)}

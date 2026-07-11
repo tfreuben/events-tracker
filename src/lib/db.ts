@@ -45,6 +45,7 @@ CREATE INDEX IF NOT EXISTS idx_events_region ON events(region);
 CREATE INDEX IF NOT EXISTS idx_events_budget_month ON events(budget_month);
 
 ALTER TABLE events ADD COLUMN IF NOT EXISTS staff_emails TEXT;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS submitter_email TEXT;
 
 CREATE TABLE IF NOT EXISTS alert_recipients (
   id SERIAL PRIMARY KEY,

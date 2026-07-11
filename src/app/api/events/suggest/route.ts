@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const {
-      submitter_name, event_name, business_unit, event_type, region,
+      submitter_name, submitter_email, event_name, business_unit, event_type, region,
       start_date, end_date, city, country, why_attend, event_url,
       venue, event_description, target_audience, key_topics,
     } = body;
@@ -102,7 +102,8 @@ export async function POST(req: NextRequest) {
         total_flight_cost, total_travel_cost, total_event_cost, budget_month,
         status, sponsorship_level, booth_number, event_website_url,
         event_description, target_audience, key_topics, products_to_feature,
-        pre_event_goals, post_event_notes, wordpress_article_status, article_url
+        pre_event_goals, post_event_notes, wordpress_article_status, article_url,
+        submitter_email
       ) VALUES (
         ${cleaned.event_name}, ${business_unit}, ${event_type}, ${region},
         ${cleaned.city || null}, ${cleaned.country || null}, ${cleaned.venue || null},
@@ -112,7 +113,8 @@ export async function POST(req: NextRequest) {
         ${0}, ${0}, ${0}, ${budgetMonth},
         ${"Requested"}, ${null}, ${null}, ${event_url || null},
         ${cleaned.event_description || null}, ${cleaned.target_audience || null}, ${cleaned.key_topics || null}, ${null},
-        ${preEventGoals}, ${null}, ${"Not Started"}, ${null}
+        ${preEventGoals}, ${null}, ${"Not Started"}, ${null},
+        ${submitter_email || null}
       ) RETURNING id`;
 
     return NextResponse.json({ success: true, id: result.rows[0].id }, { status: 201 });

@@ -13,6 +13,7 @@ export interface TFEvent {
   sales_staff_attending: number;
   staff_names: string | null;
   staff_emails: string | null;
+  submitter_email: string | null;
   event_booth_cost: number;
   est_daily_rate: number;
   total_daily_rate: number;
