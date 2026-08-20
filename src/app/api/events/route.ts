@@ -72,7 +72,8 @@ export async function POST(req: NextRequest) {
       total_flight_cost, total_travel_cost, total_event_cost, budget_month,
       status, sponsorship_level, booth_number, event_website_url,
       event_description, target_audience, key_topics, products_to_feature,
-      pre_event_goals, post_event_notes, wordpress_article_status, article_url
+      pre_event_goals, post_event_notes, wordpress_article_status, article_url,
+      abstract_status
     ) VALUES (
       ${event.event_name}, ${event.business_unit}, ${event.event_type},
       ${event.region}, ${event.city || null}, ${event.country || null},
@@ -86,7 +87,7 @@ export async function POST(req: NextRequest) {
       ${event.target_audience || null}, ${event.key_topics || null},
       ${event.products_to_feature || null}, ${event.pre_event_goals || null},
       ${event.post_event_notes || null}, ${event.wordpress_article_status || 'Not Started'},
-      ${event.article_url || null}
+      ${event.article_url || null}, ${event.abstract_status || 'Not Required'}
     ) RETURNING *`;
 
   return NextResponse.json(result.rows[0], { status: 201 });

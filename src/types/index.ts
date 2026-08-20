@@ -33,6 +33,7 @@ export interface TFEvent {
   post_event_notes: string | null;
   wordpress_article_status: string;
   article_url: string | null;
+  abstract_status: string | null;
   created_at: string;
   updated_at: string;
 }

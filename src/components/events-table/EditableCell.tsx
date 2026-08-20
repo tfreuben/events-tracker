@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { TFEvent } from "@/types";
-import { STATUSES, REGIONS, EVENT_TYPES, BUSINESS_UNITS, WORDPRESS_STATUSES, BUDGET_MONTHS } from "@/lib/constants";
+import { STATUSES, REGIONS, EVENT_TYPES, BUSINESS_UNITS, WORDPRESS_STATUSES, ABSTRACT_STATUSES, BUDGET_MONTHS } from "@/lib/constants";
 
 type CellType = "text" | "number" | "currency" | "date" | "select" | "textarea";
 
@@ -35,6 +35,7 @@ const FIELD_CONFIG: Record<string, { type: CellType; options?: readonly string[]
   post_event_notes: { type: "textarea" },
   wordpress_article_status: { type: "select", options: WORDPRESS_STATUSES },
   article_url: { type: "text" },
+  abstract_status: { type: "select", options: ABSTRACT_STATUSES },
 };
 
 // Computed fields that should not be editable

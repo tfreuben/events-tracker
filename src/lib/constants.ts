@@ -16,3 +16,5 @@ export const STATUSES = ["Planned", "Confirmed", "Completed", "Cancelled", "Requ
 export const BUDGET_MONTHS = ["Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec", "Jan", "Feb", "Mar"] as const;
 
 export const WORDPRESS_STATUSES = ["Not Started", "Draft", "Published"] as const;
+
+export const ABSTRACT_STATUSES = ["Not Required", "Not Submitted", "Submitted", "Accepted", "Rejected"] as const;
