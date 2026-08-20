@@ -8,7 +8,7 @@ export interface DueTouchpoint {
   dueDate: string;
 }
 
-const TERMINAL_STATUSES = new Set(["Cancelled"]);
+const TERMINAL_STATUSES = new Set(["Cancelled", "Not Attending"]);
 
 // Don't backfill touchpoints whose fire date is more than this far in the past.
 // Prevents a thundering herd of stale alerts the first time the scheduler runs.
