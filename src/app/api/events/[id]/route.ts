@@ -10,7 +10,7 @@ const UPDATABLE_FIELDS = [
   "budget_month", "status", "sponsorship_level", "booth_number",
   "event_website_url", "event_description", "target_audience", "key_topics",
   "products_to_feature", "pre_event_goals", "post_event_notes",
-  "wordpress_article_status", "article_url",
+  "wordpress_article_status", "article_url", "abstract_status",
 ];
 
 const COST_INPUT_FIELDS = [

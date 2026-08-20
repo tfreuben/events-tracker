@@ -35,6 +35,7 @@ CREATE TABLE IF NOT EXISTS events (
   post_event_notes TEXT,
   wordpress_article_status TEXT NOT NULL DEFAULT 'Not Started',
   article_url TEXT,
+  abstract_status TEXT DEFAULT 'Not Required',
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -45,6 +46,7 @@ CREATE INDEX IF NOT EXISTS idx_events_region ON events(region);
 CREATE INDEX IF NOT EXISTS idx_events_budget_month ON events(budget_month);
 
 ALTER TABLE events ADD COLUMN IF NOT EXISTS staff_emails TEXT;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS abstract_status TEXT DEFAULT 'Not Required';
 
 CREATE TABLE IF NOT EXISTS alert_recipients (
   id SERIAL PRIMARY KEY,
