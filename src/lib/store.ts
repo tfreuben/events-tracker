@@ -43,6 +43,31 @@ export const useAuthStore = create<AuthStore>((set) => ({
   },
 }));
 
+export type ToastVariant = "error" | "success";
+
+export interface Toast {
+  id: number;
+  variant: ToastVariant;
+  title: string;
+  description?: string;
+}
+
+interface ToastStore {
+  toasts: Toast[];
+  push: (toast: Omit<Toast, "id">) => void;
+  dismiss: (id: number) => void;
+}
+
+let nextToastId = 0;
+
+export const useToastStore = create<ToastStore>((set) => ({
+  toasts: [],
+  push: (toast) =>
+    set((state) => ({ toasts: [...state.toasts, { ...toast, id: nextToastId++ }] })),
+  dismiss: (id) =>
+    set((state) => ({ toasts: state.toasts.filter((t) => t.id !== id) })),
+}));
+
 interface UIStore {
   columnVisibility: ColumnVisibilityState;
   setColumnVisibility: (visibility: ColumnVisibilityState) => void;

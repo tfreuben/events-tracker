@@ -90,7 +90,7 @@ export function EditableCell({ event, field, value, isAdmin, onSave, children }:
     try {
       await onSave(event.id, field, saveValue);
     } catch {
-      // Error handled by parent
+      // Parent reverts the row and raises the toast; nothing to add here.
     }
     setSaving(false);
     setEditing(false);
@@ -128,10 +128,14 @@ export function EditableCell({ event, field, value, isAdmin, onSave, children }:
           // Auto-save on select change
           const val = e.target.value || null;
           setSaving(true);
-          onSave(event.id, field, val).finally(() => {
-            setSaving(false);
-            setEditing(false);
-          });
+          onSave(event.id, field, val)
+            // Parent reverts and toasts; swallow so a rejected save does not
+            // surface as an unhandled rejection.
+            .catch(() => {})
+            .finally(() => {
+              setSaving(false);
+              setEditing(false);
+            });
         }}
         onBlur={cancel}
         className={inputClass}

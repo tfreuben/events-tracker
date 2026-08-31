@@ -14,9 +14,9 @@ import { columns } from "./columns";
 import { EditableCell } from "./EditableCell";
 import { TableToolbar } from "./TableToolbar";
 import { AddEventDialog } from "./AddEventDialog";
-import { useAuthStore, useUIStore } from "@/lib/store";
+import { useAuthStore, useUIStore, useToastStore } from "@/lib/store";
 import { BU_COLORS } from "@/lib/constants";
-import { cn } from "@/lib/utils";
+import { cn, readErrorMessage } from "@/lib/utils";
 import { Loader2, Trash2 } from "lucide-react";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
@@ -37,6 +37,7 @@ function buildQueryString(filters: Record<string, string>) {
 export function EventsTable() {
   const { isAdmin } = useAuthStore();
   const { columnVisibility } = useUIStore();
+  const pushToast = useToastStore((s) => s.push);
   const [sorting, setSorting] = useState<SortingState>([{ id: "start_date", desc: false }]);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [filters, setFilters] = useState({
@@ -78,9 +79,16 @@ export function EventsTable() {
       });
 
       if (!res.ok) {
-        // Revert on failure
+        // Revert on failure. The snap-back alone reads as the app ignoring the
+        // edit, so say why: the message carries the database's own reason.
         mutate();
-        throw new Error("Failed to save");
+        const message = await readErrorMessage(res, "Could not save change");
+        pushToast({
+          variant: "error",
+          title: `Could not save ${field.replace(/_/g, " ")}`,
+          description: message,
+        });
+        throw new Error(message);
       }
 
       // Update with server response (includes recomputed costs)
@@ -91,7 +99,7 @@ export function EventsTable() {
         false
       );
     },
-    [mutate]
+    [mutate, pushToast]
   );
 
   const handleDelete = useCallback(
@@ -102,9 +110,16 @@ export function EventsTable() {
         false
       );
       const res = await fetch(`/api/events/${eventId}`, { method: "DELETE" });
-      if (!res.ok) mutate();
+      if (!res.ok) {
+        mutate();
+        pushToast({
+          variant: "error",
+          title: "Could not delete event",
+          description: await readErrorMessage(res, "Delete failed"),
+        });
+      }
     },
-    [mutate]
+    [mutate, pushToast]
   );
 
   // Not memoized: it reads displayEvents, which is derived further down, so a
@@ -148,10 +163,7 @@ export function EventsTable() {
     if (!res.ok) {
       // Throw so the dialog stays open and can show why. Silently doing nothing
       // here is what made a server-side failure look like a dead Save button.
-      const body = await res.json().catch(() => null);
-      throw new Error(
-        body?.detail || body?.error || `Could not save event (HTTP ${res.status})`
-      );
+      throw new Error(await readErrorMessage(res, "Could not save event"));
     }
 
     mutate();

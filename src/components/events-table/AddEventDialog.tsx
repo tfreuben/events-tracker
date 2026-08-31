@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { X } from "lucide-react";
 import { TFEvent } from "@/types";
 import { BUSINESS_UNITS, EVENT_TYPES, REGIONS, STATUSES, BUDGET_MONTHS } from "@/lib/constants";
@@ -13,6 +13,7 @@ interface Props {
 export function AddEventDialog({ onClose, onSave }: Props) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const errorRef = useRef<HTMLParagraphElement>(null);
   const [form, setForm] = useState({
     event_name: "",
     business_unit: "TrustFlight",
@@ -45,6 +46,11 @@ export function AddEventDialog({ onClose, onSave }: Props) {
       await onSave(form);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not save event");
+      // The form is taller than the dialog, so bring the reason into view
+      // rather than leaving it below the fold.
+      requestAnimationFrame(() =>
+        errorRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" })
+      );
     }
     setSaving(false);
   };
@@ -159,7 +165,11 @@ export function AddEventDialog({ onClose, onSave }: Props) {
             </div>
           </div>
           {error && (
-            <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md px-3 py-2 break-words">
+            <p
+              ref={errorRef}
+              role="alert"
+              className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md px-3 py-2 break-words"
+            >
               {error}
             </p>
           )}
