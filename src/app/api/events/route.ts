@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@/lib/db";
 import { isAdmin } from "@/lib/auth";
 import { computeCosts } from "@/lib/computations";
+import { writeError } from "@/lib/api-error";
 
 export async function GET(req: NextRequest) {
   const params = req.nextUrl.searchParams;
@@ -64,7 +65,8 @@ export async function POST(req: NextRequest) {
   const costs = computeCosts(body);
   const event = { ...body, ...costs };
 
-  const result = await sql`
+  try {
+    const result = await sql`
     INSERT INTO events (
       event_name, business_unit, event_type, region, city, country, venue,
       start_date, end_date, number_of_days, sales_staff_attending, staff_names,
@@ -90,5 +92,8 @@ export async function POST(req: NextRequest) {
       ${event.article_url || null}, ${event.abstract_status || 'Not Required'}
     ) RETURNING *`;
 
-  return NextResponse.json(result.rows[0], { status: 201 });
+    return NextResponse.json(result.rows[0], { status: 201 });
+  } catch (err) {
+    return writeError("Create event", err);
+  }
 }

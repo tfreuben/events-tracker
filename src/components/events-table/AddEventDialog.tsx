@@ -12,6 +12,7 @@ interface Props {
 
 export function AddEventDialog({ onClose, onSave }: Props) {
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
   const [form, setForm] = useState({
     event_name: "",
     business_unit: "TrustFlight",
@@ -38,8 +39,13 @@ export function AddEventDialog({ onClose, onSave }: Props) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.event_name) return;
+    setError("");
     setSaving(true);
-    await onSave(form);
+    try {
+      await onSave(form);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not save event");
+    }
     setSaving(false);
   };
 
@@ -152,6 +158,11 @@ export function AddEventDialog({ onClose, onSave }: Props) {
               <input className={inputClass} value={form.key_topics} onChange={(e) => update("key_topics", e.target.value)} placeholder="Comma-separated" />
             </div>
           </div>
+          {error && (
+            <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md px-3 py-2 break-words">
+              {error}
+            </p>
+          )}
           <div className="flex justify-end gap-3 pt-4 border-t">
             <button type="button" onClick={onClose} className="px-4 py-2 text-sm border rounded-md hover:bg-slate-50">
               Cancel

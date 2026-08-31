@@ -137,10 +137,18 @@ export function EventsTable() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(eventData),
     });
-    if (res.ok) {
-      mutate();
-      setShowAddDialog(false);
+
+    if (!res.ok) {
+      // Throw so the dialog stays open and can show why. Silently doing nothing
+      // here is what made a server-side failure look like a dead Save button.
+      const body = await res.json().catch(() => null);
+      throw new Error(
+        body?.detail || body?.error || `Could not save event (HTTP ${res.status})`
+      );
     }
+
+    mutate();
+    setShowAddDialog(false);
   }, [mutate]);
 
   // Deduplicate events on the "All" tab: group by event name + dates, merge BU badges
