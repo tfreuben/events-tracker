@@ -21,6 +21,11 @@ import { Loader2, Trash2 } from "lucide-react";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
+const COST_COLUMNS = [
+  "event_booth_cost", "est_daily_rate", "total_daily_rate",
+  "flight_cost_per_person", "total_flight_cost", "total_travel_cost", "total_event_cost",
+];
+
 function buildQueryString(filters: Record<string, string>) {
   const params = new URLSearchParams();
   for (const [key, value] of Object.entries(filters)) {
@@ -102,7 +107,9 @@ export function EventsTable() {
     [mutate]
   );
 
-  const handleExportCSV = useCallback(() => {
+  // Not memoized: it reads displayEvents, which is derived further down, so a
+  // dependency array here either goes stale on a filter change or hits the TDZ.
+  const handleExportCSV = () => {
     if (!displayEvents.length) return;
     const headers = columns
       .map((c) => (c as { accessorKey?: string }).accessorKey)
@@ -129,7 +136,7 @@ export function EventsTable() {
     a.download = "events-tracker.csv";
     a.click();
     URL.revokeObjectURL(url);
-  }, [events]);
+  };
 
   const handleAddEvent = useCallback(async (eventData: Partial<TFEvent>) => {
     const res = await fetch("/api/events", {
@@ -209,11 +216,6 @@ export function EventsTable() {
       },
     ];
   }, [isAdmin, handleDelete]);
-
-  const COST_COLUMNS = [
-    "event_booth_cost", "est_daily_rate", "total_daily_rate",
-    "flight_cost_per_person", "total_flight_cost", "total_travel_cost", "total_event_cost",
-  ];
 
   const effectiveVisibility = useMemo(() => {
     if (isAdmin) return columnVisibility;
