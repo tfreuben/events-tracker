@@ -21,6 +21,11 @@ import { Loader2, Trash2 } from "lucide-react";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
+const COST_COLUMNS = [
+  "event_booth_cost", "est_daily_rate", "total_daily_rate",
+  "flight_cost_per_person", "total_flight_cost", "total_travel_cost", "total_event_cost",
+];
+
 function buildQueryString(filters: Record<string, string>) {
   const params = new URLSearchParams();
   for (const [key, value] of Object.entries(filters)) {
@@ -102,7 +107,9 @@ export function EventsTable() {
     [mutate]
   );
 
-  const handleExportCSV = useCallback(() => {
+  // Not memoized: it reads displayEvents, which is derived further down, so a
+  // dependency array here either goes stale on a filter change or hits the TDZ.
+  const handleExportCSV = () => {
     if (!displayEvents.length) return;
     const headers = columns
       .map((c) => (c as { accessorKey?: string }).accessorKey)
@@ -129,7 +136,7 @@ export function EventsTable() {
     a.download = "events-tracker.csv";
     a.click();
     URL.revokeObjectURL(url);
-  }, [events]);
+  };
 
   const handleAddEvent = useCallback(async (eventData: Partial<TFEvent>) => {
     const res = await fetch("/api/events", {
@@ -137,10 +144,18 @@ export function EventsTable() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(eventData),
     });
-    if (res.ok) {
-      mutate();
-      setShowAddDialog(false);
+
+    if (!res.ok) {
+      // Throw so the dialog stays open and can show why. Silently doing nothing
+      // here is what made a server-side failure look like a dead Save button.
+      const body = await res.json().catch(() => null);
+      throw new Error(
+        body?.detail || body?.error || `Could not save event (HTTP ${res.status})`
+      );
     }
+
+    mutate();
+    setShowAddDialog(false);
   }, [mutate]);
 
   // Deduplicate events on the "All" tab: group by event name + dates, merge BU badges
@@ -201,11 +216,6 @@ export function EventsTable() {
       },
     ];
   }, [isAdmin, handleDelete]);
-
-  const COST_COLUMNS = [
-    "event_booth_cost", "est_daily_rate", "total_daily_rate",
-    "flight_cost_per_person", "total_flight_cost", "total_travel_cost", "total_event_cost",
-  ];
 
   const effectiveVisibility = useMemo(() => {
     if (isAdmin) return columnVisibility;
