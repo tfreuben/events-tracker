@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { Header } from "./Header";
+import { Toaster } from "@/components/ui/Toaster";
 import { useAuthStore } from "@/lib/store";
 
 export function ClientProviders({ children }: { children: React.ReactNode }) {
@@ -16,13 +17,19 @@ export function ClientProviders({ children }: { children: React.ReactNode }) {
   }, [checkSession, pathname]);
 
   if (pathname === "/suggest") {
-    return <>{children}</>;
+    return (
+      <>
+        {children}
+        <Toaster />
+      </>
+    );
   }
 
   return (
     <>
       <Header />
       <main className="max-w-[1800px] mx-auto px-4 py-6">{children}</main>
+      <Toaster />
     </>
   );
 }

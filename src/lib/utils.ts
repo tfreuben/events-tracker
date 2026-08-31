@@ -5,6 +5,19 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+/**
+ * Pulls the reason out of a failed write. The API returns { error, detail },
+ * where detail carries the database message; falls back to the status code so
+ * a proxy error or a non-JSON body still says something useful.
+ */
+export async function readErrorMessage(
+  res: Response,
+  fallback: string
+): Promise<string> {
+  const body = await res.json().catch(() => null);
+  return body?.detail || body?.error || `${fallback} (HTTP ${res.status})`;
+}
+
 export function formatCurrency(value: number | null | undefined): string {
   if (value == null) return "";
   return new Intl.NumberFormat("en-US", {
